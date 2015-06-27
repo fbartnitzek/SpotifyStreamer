@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/list_item_artist_image"
+        android:layout_width="@dimen/artist_image_size"
+        android:layout_height="@dimen/artist_image_size"
+        android:layout_margin="@dimen/artist_image_margin"/>
+
+    <TextView
+        android:layout_toRightOf="@id/list_item_artist_image"
+        android:layout_toEndOf="@id/list_item_artist_image"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/sample_artist"
+        android:id="@+id/list_item_artist_name"
+        android:gravity="center_vertical"
+        android:layout_marginLeft="@dimen/artist_text_left_margin"
+        android:minHeight="?android:attr/listPreferredItemHeight"/>
+
+</RelativeLayout>
