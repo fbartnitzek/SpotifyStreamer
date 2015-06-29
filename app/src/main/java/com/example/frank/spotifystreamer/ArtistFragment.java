@@ -16,6 +16,9 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Artist;
@@ -31,8 +34,9 @@ import retrofit.client.Response;
 public class ArtistFragment extends Fragment {
 
     private static final String LOG_TAG = ArtistFragment.class.getSimpleName();
+    private static final String ARTIST_LISTVIEW_STATE = "ARTIST_LISTVIEW_STATE";
     private ArtistAdapter mArtistAdapter;
-
+    private float iconSize;
     public ArtistFragment() {
     }
 
@@ -40,6 +44,14 @@ public class ArtistFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        // seems to convert out of the box (dp to px)
+//        iconSize = activity.getResources().getDimension(R.dimen.artist_image_size);
+
+//        float dp = activity.getResources().getDimension(R.dimen.artist_image_size);
+//        float density = getContext().getApplicationContext().getResources().getDisplayMetrics().density;
+//        iconSize = Math.round(dp * density);
+
+        iconSize = getActivity().getResources().getDimension(R.dimen.artist_image_size);
         mArtistAdapter = new ArtistAdapter(getActivity());
 
         View rootView = inflater.inflate(R.layout.fragment_artist, container, false);
@@ -48,19 +60,29 @@ public class ArtistFragment extends Fragment {
         ListView listView = (ListView) rootView.findViewById(R.id.listview_artists);
         listView.setAdapter(mArtistAdapter);
 
+        if (savedInstanceState != null && savedInstanceState.containsKey(
+                getString(R.string.intent_artist_key))){    // restore artists
+            ArrayList<ArtistParcelable> allArtists =
+                    savedInstanceState.getParcelableArrayList(ARTIST_LISTVIEW_STATE);
+            if(!allArtists.isEmpty()){
+                mArtistAdapter.addAll(allArtists);
+            }
+        } // else {    // empty remains empty - do not fetch artists
+
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String artistId = mArtistAdapter.getItem(position).id;
-                String artistName = mArtistAdapter.getItem(position).name;
-                String[] artistArray = new String[]{artistId, artistName};
+                // use parcelableArtist directly
                 Intent trackIntent = new Intent(getActivity(), TrackActivity.class)
-                        .putExtra(Intent.EXTRA_TEXT, artistArray);
+                        .putExtra(
+                                getString(R.string.intent_artist_key),
+                                mArtistAdapter.getItem(position));
                 startActivity(trackIntent);
             }
         });
 
         // textbox to search artist
+        // will be called every time - parcelableArtist seems a bit useless here
         EditText txtArtist = (EditText) rootView.findViewById(R.id.txt_artist);
         txtArtist.addTextChangedListener(new TextWatcher() {
             @Override
@@ -75,7 +97,6 @@ public class ArtistFragment extends Fragment {
 
             @Override
             public void afterTextChanged(Editable s) {
-
                 new FetchArtistTask().execute(s.toString());    //start asyncFetchTask
             }
         });
@@ -83,11 +104,27 @@ public class ArtistFragment extends Fragment {
         return rootView;
     }
 
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
 
-    public class FetchArtistTask extends AsyncTask<String, Void, Artist[]>{
+        if (mArtistAdapter.isEmpty()){
+            return;
+        }
+
+        ArrayList<ArtistParcelable> artists = new ArrayList<>();
+
+        for (int i = 0; i<mArtistAdapter.getCount();++i){
+            artists.add(mArtistAdapter.getItem(i));
+        }
+
+        savedInstanceState.putParcelableArrayList(ARTIST_LISTVIEW_STATE, artists);
+    }
+
+    public class FetchArtistTask extends AsyncTask<String, Void, ArtistParcelable[]>{
 
         @Override
-        protected Artist[] doInBackground(String... params) {
+        protected ArtistParcelable[] doInBackground(String... params) {
             // void seems to be no valid option
 
             if (params.length == 0){
@@ -95,6 +132,9 @@ public class ArtistFragment extends Fragment {
             }
 
             String artistPattern = params[0];
+
+            // will be called every time...
+//            Log.v(LOG_TAG, "fetch artists for artistPattern " + artistPattern);
 
             try {
                 SpotifyApi api = new SpotifyApi();
@@ -105,8 +145,7 @@ public class ArtistFragment extends Fragment {
                     public void success(ArtistsPager artistsPager, Response response) {
                         if (artistsPager!=null && artistsPager.artists.items.size()>0){
                             mArtistAdapter.clear();
-                            mArtistAdapter.addAll(artistsPager.artists.items);
-
+                            mArtistAdapter.addAll(convertArtists(artistsPager.artists.items));
                         } else {
                             mArtistAdapter.clear();
                             toastError(null);
@@ -129,11 +168,24 @@ public class ArtistFragment extends Fragment {
             return null;
         }
 
+        private List<ArtistParcelable> convertArtists(List<Artist> artists) {
+            List<ArtistParcelable> result = new ArrayList<>();
+            for (int i=0; i<artists.size();++i) {
+                Artist artist = artists.get(i);
+                result.add(new ArtistParcelable(
+                        artist.name,
+                        ImageHelper.getSmallestMatchingImage(artist.images, iconSize),
+                        artist.id));
+            }
+
+            return result;
+        }
+
         private void toastError (String errorMsg){
             Context context = getActivity();
             CharSequence text;
             if (errorMsg == null){
-                 text = "No matching artists - try to refine the search.";
+                text = "No matching artists - try to refine the search.";
             } else {
                 text = "No matching artists - try to refine the search (" + errorMsg + ").";
             }

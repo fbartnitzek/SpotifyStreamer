@@ -10,7 +10,7 @@
 
     <ListView
         android:layout_width="match_parent"
-        android:id="@+id/listview_details"
+        android:id="@+id/listview_tracks"
         android:layout_height="match_parent" />
 
 </RelativeLayout>

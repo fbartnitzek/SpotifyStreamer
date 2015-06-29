@@ -10,22 +10,18 @@ import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
 
-import kaaes.spotify.webapi.android.models.Track;
-
 /**
  * Created by frank on 24.06.15.
  */
-class TrackAdapter extends ArrayAdapter<Track> {
+class TrackAdapter extends ArrayAdapter<TrackParcelable> {
 
     private static final String LOG_TAG = TrackAdapter.class.getSimpleName();
-    private final float iconSize;
     private final Activity activity;
 
     public TrackAdapter(Activity activity) {
 
         super(activity, R.layout.list_item_track);
         this.activity = activity;
-        iconSize = activity.getResources().getDimension(R.dimen.album_image_size);
     }
 
     private static class ViewHolder {
@@ -55,17 +51,16 @@ class TrackAdapter extends ArrayAdapter<Track> {
 
         ViewHolder viewHolder = (ViewHolder) rowView.getTag();
 
-        Track track = this.getItem(position);
-
+        TrackParcelable track = this.getItem(position);
         // track name
-        viewHolder.track.setText(track.name);
+        viewHolder.track.setText(track.getName());
 
         // album name
-        viewHolder.album.setText(track.album.name);
+        viewHolder.album.setText(track.getAlbum());
 
         // album icon
-        String url = ImageHelper.getSmallestMatchingImage(track.album.images, iconSize);
-        if (url != null){
+        String url = track.getPictureUrl();
+        if (url != null && !url.isEmpty()){
             Picasso.with(getContext()).load(url).into(viewHolder.image);
         }
 

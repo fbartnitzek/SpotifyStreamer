@@ -8,7 +8,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +15,9 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import kaaes.spotify.webapi.android.SpotifyApi;
@@ -34,6 +35,9 @@ import retrofit.client.Response;
 public class TrackActivityFragment extends Fragment {
 
     private static final String LOG_TAG = TrackActivityFragment.class.getSimpleName();
+    private static final String TRACK_LISTVIEW_STATE = "TRACK_LISTVIEW_STATE";
+    private static final String TITLE_STATE= "TITLE_STATE";
+    private float iconSize;
     private TrackAdapter mTrackAdapter;
 
     public TrackActivityFragment() {
@@ -43,26 +47,40 @@ public class TrackActivityFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
+        iconSize = getActivity().getResources().getDimension(R.dimen.album_image_size);
         mTrackAdapter = new TrackAdapter(getActivity());
 
         View rootView = inflater.inflate(R.layout.fragment_track, container, false);
 
-        ListView listView = (ListView) rootView.findViewById(R.id.listview_details);
+        // listview to show tracks
+        ListView listView = (ListView) rootView.findViewById(R.id.listview_tracks);
         listView.setAdapter(mTrackAdapter);
 
+        if (savedInstanceState != null){
 
-        Intent intent = getActivity().getIntent();
-        if (intent != null && intent.hasExtra(Intent.EXTRA_TEXT)) {
-            String[] artistArray = intent.getStringArrayExtra(Intent.EXTRA_TEXT);
-            String artistId = artistArray[0];
-            String artistName = artistArray[1];
+            if (savedInstanceState.containsKey(TITLE_STATE)){    // restore artist-title
+                getActivity().setTitle(savedInstanceState.getString(TITLE_STATE));
+            }
 
-            // change title to artistName
-            getActivity().setTitle(getString(R.string.title_activity_track) + " (" + artistName + ")");
+            if (savedInstanceState.containsKey(TRACK_LISTVIEW_STATE)){    //restore tracks
+                ArrayList<TrackParcelable> allTracks =
+                        savedInstanceState.getParcelableArrayList(TRACK_LISTVIEW_STATE);
+                if (!allTracks.isEmpty()){
+                    mTrackAdapter.addAll(allTracks);
+                }
+            }
 
-            // fill list
-            new FetchTrackTask().execute(artistId);
+        } else {    // fetch tracks
+            Intent intent = getActivity().getIntent();
+            if (intent != null && intent.hasExtra(getString(R.string.intent_artist_key))) {
+                ArtistParcelable artist = intent.getParcelableExtra(getString(R.string.intent_artist_key));
 
+                getActivity().setTitle(
+                        getString(R.string.title_activity_track) + " (" + artist.getName() + ")");
+
+                // fill list
+                new FetchTrackTask().execute(artist.getId());
+            }
         }
 
         // try open uri in browser to play the track
@@ -71,12 +89,12 @@ public class TrackActivityFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
                 String previewUrl = null;
-                Track track = mTrackAdapter.getItem(position);
-                if (track != null){
-                    previewUrl = track.preview_url;
+                TrackParcelable track = mTrackAdapter.getItem(position);
+                if (track != null) {
+                    previewUrl = track.getPreviewUrl();
                 }
 
-                if (previewUrl!=null){
+                if (previewUrl != null) {
                     Intent urlIntent = new Intent(Intent.ACTION_VIEW);
                     urlIntent.setData(Uri.parse(previewUrl));
                     startActivity(urlIntent);
@@ -87,17 +105,35 @@ public class TrackActivityFragment extends Fragment {
         return rootView;
     }
 
-    private class FetchTrackTask extends AsyncTask<String, Void, Track[]> {
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+
+        if (!mTrackAdapter.isEmpty()){
+            // array just working with casts...
+            ArrayList<TrackParcelable> parcelables = new ArrayList<>();
+            for (int i = 0; i<mTrackAdapter.getCount();++i){
+                parcelables.add(mTrackAdapter.getItem(i));
+            }
+            savedInstanceState.putParcelableArrayList(TRACK_LISTVIEW_STATE, parcelables);
+        }
+
+        savedInstanceState.putCharSequence(TITLE_STATE, getActivity().getTitle());
+    }
+
+    private class FetchTrackTask extends AsyncTask<String, Void, TrackParcelable[]> {
 
         @Override
-        protected Track[] doInBackground(String... params) {
+        protected TrackParcelable[] doInBackground(String... params) {
 
             if (params.length == 0){
                 return null;
             }
 
             String artistId = params[0];
-            Log.v(LOG_TAG, "fetch tracks for artistId " + artistId);
+
+            // wont be called every time :-)
+//            Log.v(LOG_TAG, "fetch tracks for artistId " + artistId);
 
             SpotifyApi api = new SpotifyApi();
             SpotifyService spotify = api.getService();
@@ -115,7 +151,7 @@ public class TrackActivityFragment extends Fragment {
                 public void success(Tracks tracks, Response response) {
                     if (tracks != null && tracks.tracks.size()>0){
                         mTrackAdapter.clear();
-                        mTrackAdapter.addAll(tracks.tracks);
+                        mTrackAdapter.addAll(convertTracks(tracks.tracks));
                     } else {
                         mTrackAdapter.clear();
                         toastError(null);
@@ -131,6 +167,22 @@ public class TrackActivityFragment extends Fragment {
             });
 
             return null;
+        }
+
+        /** converts spotify-wrapper-tracks to parcelable tracks
+        (containing name, album, albumImageUrl)*/
+        private List<TrackParcelable> convertTracks(List<Track> tracks) {
+            List<TrackParcelable> result = new ArrayList<>();
+            for (int i = 0; i<tracks.size();++i){
+                Track track = tracks.get(i);
+                result.add(new TrackParcelable(
+                        track.name,
+                        track.album.name,
+                        ImageHelper.getSmallestMatchingImage(track.album.images, iconSize),
+                        track.preview_url));
+            }
+
+            return result;
         }
 
         private void toastError (String errorMsg){

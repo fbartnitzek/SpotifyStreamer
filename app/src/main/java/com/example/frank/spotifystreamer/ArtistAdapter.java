@@ -10,30 +10,20 @@ import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
 
-import kaaes.spotify.webapi.android.models.Artist;
-
 /**
  * Created by frank on 24.06.15.
  */
-class ArtistAdapter extends ArrayAdapter<Artist> {
+class ArtistAdapter extends ArrayAdapter<ArtistParcelable> {
 
 
     private static final String LOG_TAG = ArtistAdapter.class.getSimpleName();
-    private final float iconSize;
     private final Activity activity;    //seems to be resource-friendlier this way (part of ViewHolder-pattern)
 
     public ArtistAdapter(Activity activity) {
-        super(activity, R.layout.list_item_artist);   // second part just for documentation...
+        super(activity, R.layout.list_item_artist);
         this.activity = activity;
-
-        // seems to convert out of the box (dp to px)
-        iconSize = activity.getResources().getDimension(R.dimen.artist_image_size);
-
-//        float dp = activity.getResources().getDimension(R.dimen.artist_image_size);
-//        float density = getContext().getApplicationContext().getResources().getDisplayMetrics().density;
-//        iconSize = Math.round(dp * density);
     }
-//
+
     private static class ViewHolder {
         ImageView imageView;
         TextView textView;
@@ -61,14 +51,14 @@ class ArtistAdapter extends ArrayAdapter<Artist> {
         }
 
         ViewHolder viewHolder = (ViewHolder) rowView.getTag();
-        Artist artist = this.getItem(position);
+        ArtistParcelable artist = this.getItem(position);
 
         // artistName
-        viewHolder.textView.setText(artist.name);
+        viewHolder.textView.setText(artist.getName());
 
         // artistIcon
-        String url = ImageHelper.getSmallestMatchingImage(artist.images, iconSize);
-        if (url != null){
+        String url = artist.getPictureUrl();
+        if (url != null && !url.isEmpty()){
             Picasso.with(getContext()).load(url).into(viewHolder.imageView);
         }
 
