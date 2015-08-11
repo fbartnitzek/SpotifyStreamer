@@ -1,18 +1,15 @@
 package com.example.frank.spotifystreamer;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -23,10 +20,9 @@ import kaaes.spotify.webapi.android.SpotifyApi;
 import kaaes.spotify.webapi.android.SpotifyService;
 import kaaes.spotify.webapi.android.models.Artist;
 import kaaes.spotify.webapi.android.models.ArtistsPager;
-import retrofit.Callback;
-import retrofit.RetrofitError;
-import retrofit.client.Response;
 
+
+// TODO: wlan not active - refine search...! => service not available
 
 /**
  * A placeholder fragment containing a simple view.
@@ -35,69 +31,101 @@ public class ArtistFragment extends Fragment {
 
     private static final String LOG_TAG = ArtistFragment.class.getSimpleName();
     private static final String ARTIST_LISTVIEW_STATE = "ARTIST_LISTVIEW_STATE";
+    private static final String SELECTED_KEY = "SELECTED_KEY";
     private ArtistAdapter mArtistAdapter;
     private float iconSize;
-    public ArtistFragment() {
+    private ListView mListView;
+    private int mPosition = ListView.INVALID_POSITION;
+
+    // loader and callbacks seems like overkill for an "always online app"
+    // might just be useful for history...
+
+    /**
+     * DetailFragmentCallback for when an item has been selected.
+     */
+    public interface Callback {
+        public void onItemSelected(ArtistParcelable artistUri);
+    }
+
+
+    public ArtistFragment() {}
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        // seems to convert out of the box (dp to px)
-//        iconSize = activity.getResources().getDimension(R.dimen.artist_image_size);
-
-//        float dp = activity.getResources().getDimension(R.dimen.artist_image_size);
-//        float density = getContext().getApplicationContext().getResources().getDisplayMetrics().density;
-//        iconSize = Math.round(dp * density);
-
         iconSize = getActivity().getResources().getDimension(R.dimen.artist_image_size);
         mArtistAdapter = new ArtistAdapter(getActivity());
 
         View rootView = inflater.inflate(R.layout.fragment_artist, container, false);
 
+
+        // SearchView
+        final SearchView searchView = (SearchView) rootView.findViewById(R.id.search_artist);
+        // TODO: start with searchView in focus and keyboard opened
+        // does not work as expected ...
+//        searchView.requestFocus();
+//        getActivity().getWindow().setSoftInputMode(
+//                WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        searchView.setOnQueryTextListener(
+                new SearchView.OnQueryTextListener() {
+
+                    @Override
+                    public boolean onQueryTextSubmit(String query) {
+                        // interactive search
+//                        new FetchArtistTask().execute(query);    //start asyncFetchTask
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onQueryTextChange(String newText) {
+                        if (newText != null && !newText.isEmpty()) {
+                            new FetchArtistTask().execute(newText);    //start asyncFetchTask
+                        } else {
+                            mArtistAdapter.clear();
+                        }
+                        return true;
+                    }
+                }
+        );
+
         // listview to show artists
-        ListView listView = (ListView) rootView.findViewById(R.id.listview_artists);
-        listView.setAdapter(mArtistAdapter);
+        mListView = (ListView) rootView.findViewById(R.id.listview_artists);
+        mListView.setAdapter(mArtistAdapter);
 
-        if (savedInstanceState != null && savedInstanceState.containsKey(
-                getString(R.string.intent_artist_key))){    // restore artists
-            ArrayList<ArtistParcelable> allArtists =
-                    savedInstanceState.getParcelableArrayList(ARTIST_LISTVIEW_STATE);
-            if(!allArtists.isEmpty()){
-                mArtistAdapter.addAll(allArtists);
+        if (savedInstanceState != null){
+            if (savedInstanceState.containsKey(ARTIST_LISTVIEW_STATE)) {
+                // restore artist list
+                ArrayList<ArtistParcelable> allArtists =
+                        savedInstanceState.getParcelableArrayList(ARTIST_LISTVIEW_STATE);
+                if (!allArtists.isEmpty()) {
+                    mArtistAdapter.addAll(allArtists);
+                }
             }
-        } // else {    // empty remains empty - do not fetch artists
+            if (savedInstanceState.containsKey(SELECTED_KEY)) {
+                mPosition = savedInstanceState.getInt(SELECTED_KEY);
+                if (mPosition != ListView.INVALID_POSITION){
+                    mListView.smoothScrollToPosition(mPosition);
+                }
+            }
+        }
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // use parcelableArtist directly
-                Intent trackIntent = new Intent(getActivity(), TrackActivity.class)
-                        .putExtra(
-                                getString(R.string.intent_artist_key),
-                                mArtistAdapter.getItem(position));
-                startActivity(trackIntent);
-            }
-        });
 
-        // textbox to search artist
-        // will be called every time - parcelableArtist seems a bit useless here
-        EditText txtArtist = (EditText) rootView.findViewById(R.id.txt_artist);
-        txtArtist.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // remove keyboard from view
+                searchView.clearFocus();
+                mPosition = position;
 
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                new FetchArtistTask().execute(s.toString());    //start asyncFetchTask
+                // update MainActivity with ArtistParcelable of selected item
+                ((Callback) getActivity()).onItemSelected(mArtistAdapter.getItem(position));
             }
         });
 
@@ -119,9 +147,21 @@ public class ArtistFragment extends Fragment {
         }
 
         savedInstanceState.putParcelableArrayList(ARTIST_LISTVIEW_STATE, artists);
+        savedInstanceState.putInt(SELECTED_KEY, mPosition);
     }
 
     public class FetchArtistTask extends AsyncTask<String, Void, ArtistParcelable[]>{
+
+        @Override
+        protected void onPostExecute(ArtistParcelable[] artistParcelables) {
+            mArtistAdapter.clear();
+            if (artistParcelables != null){
+                mArtistAdapter.addAll(artistParcelables);
+            } else {
+                toastError(null);
+            }
+            mArtistAdapter.notifyDataSetChanged();
+        }
 
         @Override
         protected ArtistParcelable[] doInBackground(String... params) {
@@ -134,31 +174,21 @@ public class ArtistFragment extends Fragment {
             String artistPattern = params[0];
 
             // will be called every time...
-//            Log.v(LOG_TAG, "fetch artists for artistPattern " + artistPattern);
+            Log.v(LOG_TAG, "fetch artists for artistPattern " + artistPattern);
 
             try {
                 SpotifyApi api = new SpotifyApi();
                 SpotifyService spotify = api.getService();
 
-                spotify.searchArtists(artistPattern, new Callback<ArtistsPager>() {
-                    @Override
-                    public void success(ArtistsPager artistsPager, Response response) {
-                        if (artistsPager!=null && artistsPager.artists.items.size()>0){
-                            mArtistAdapter.clear();
-                            mArtistAdapter.addAll(convertArtists(artistsPager.artists.items));
-                        } else {
-                            mArtistAdapter.clear();
-                            toastError(null);
-                        }
-                    }
+                ArtistsPager artists = spotify.searchArtists(artistPattern);
 
-                    @Override
-                    public void failure(RetrofitError error) {
-                        mArtistAdapter.clear();
-                        toastError(error.getLocalizedMessage());
+                if (artists == null){
+                    return null;
+                } else {
+                    Log.v(LOG_TAG, artists.artists.items.size() + " artists found");
+                    return convertArtists(artists.artists.items);
+                }
 
-                    }
-                });
 
             } catch (Exception e){
                 Log.e(LOG_TAG, "could not fetch artist from spotify: " + artistPattern
@@ -168,16 +198,17 @@ public class ArtistFragment extends Fragment {
             return null;
         }
 
-        private List<ArtistParcelable> convertArtists(List<Artist> artists) {
-            List<ArtistParcelable> result = new ArrayList<>();
+        private ArtistParcelable[] convertArtists(List<Artist> artists) {
+            List<ArtistParcelable> list = new ArrayList<>();
             for (int i=0; i<artists.size();++i) {
                 Artist artist = artists.get(i);
-                result.add(new ArtistParcelable(
+                list.add(new ArtistParcelable(
                         artist.name,
                         ImageHelper.getSmallestMatchingImage(artist.images, iconSize),
                         artist.id));
             }
 
+            ArtistParcelable[] result = list.toArray(new ArtistParcelable[list.size()]);
             return result;
         }
 

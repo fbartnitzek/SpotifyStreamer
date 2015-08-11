@@ -4,6 +4,7 @@
 
     <!-- grants internet-access for webservice openweathermap.org -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:allowBackup="true"
@@ -28,6 +29,15 @@
                 android:value="com.example.frank.spotifystreamer.MainActivity" />
         </activity>
         <activity
+            android:name=".PlayerActivity"
+            android:label="now playing"
+            android:parentActivityName=".TrackActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.frank.spotifystreamer.TrackActivity" />
+        </activity>
+
+        <activity
             android:name=".SettingsActivity"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".MainActivity" >
@@ -35,6 +45,8 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.frank.spotifystreamer.MainActivity" />
         </activity>
+
+        <service android:name=".PlayerService" android:exported="true"/>
     </application>
 
 </manifest>

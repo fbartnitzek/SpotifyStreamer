@@ -1,26 +1,39 @@
 package com.example.frank.spotifystreamer;
 
 import android.content.Intent;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements ArtistFragment.Callback{
 
+    private static final String DETAILFRAGMENT_TAG = "DFTAG";
     private final String LOG_TAG = MainActivity.class.getSimpleName();
+
+    private boolean mTwoPane;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new ArtistFragment())
-                    .commit();
+        if (findViewById(R.id.track_detail_container) != null){
+            // the detail container will only be present for large screens (layout-sw600dp)
+            mTwoPane = true;
+
+            if (savedInstanceState == null) {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.track_detail_container, new TrackFragment(),
+                                DETAILFRAGMENT_TAG)
+                        .commit();
+            }
+        } else {
+            mTwoPane =false;
         }
+
     }
 
 
@@ -45,5 +58,32 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // change TrackFragment f.e. other country selected
+    }
+
+    @Override
+    public void onItemSelected(ArtistParcelable artistParcelable) {
+        if (mTwoPane){
+            Bundle args = new Bundle();
+            args.putParcelable(TrackFragment.ARTIST_PARCELABLE, artistParcelable);
+
+            Fragment fragment = new TrackFragment();
+            fragment.setArguments(args);
+
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.track_detail_container, fragment, DETAILFRAGMENT_TAG)
+                    .commit();
+
+        } else {
+            // use parcelableArtist directly
+            Intent trackIntent = new Intent(this, TrackActivity.class)
+                    .putExtra(TrackActivity.INTENT_ARTIST_KEY, artistParcelable);
+            startActivity(trackIntent);
+        }
     }
 }

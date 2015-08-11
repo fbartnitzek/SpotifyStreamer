@@ -1,26 +1,39 @@
 package com.example.frank.spotifystreamer;
 
 import android.content.Intent;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.os.Parcelable;
+import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
 
 public class TrackActivity extends ActionBarActivity {
 
+    public static final String INTENT_ARTIST_KEY = "INTENT_ARTIST_KEY";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_track);
 
         // not needed here, but in main-activity...?
+        Bundle args = new Bundle();
 
-//        if (savedInstanceState == null) {
-//            getSupportFragmentManager().beginTransaction()
-//                    .add(R.id.container, new TrackActivityFragment())
-//                    .commit();
-//        }
+        Parcelable artist = getIntent().getParcelableExtra(INTENT_ARTIST_KEY);
+        args.putParcelable(TrackFragment.ARTIST_PARCELABLE, artist);
+        TrackFragment fragment = new TrackFragment();
+        fragment.setArguments(args);
+
+        this.setTitle(getString(R.string.title_activity_track)
+                        + " (" + ((ArtistParcelable) artist).getName() + ")");
+
+        if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.track_detail_container, fragment)
+                    .commit();
+        }
     }
 
 
@@ -48,4 +61,5 @@ public class TrackActivity extends ActionBarActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
 }

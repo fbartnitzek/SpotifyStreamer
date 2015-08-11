@@ -1,7 +1,8 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<fragment xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/container"
+    android:id="@+id/fragment_artist"
+    android:name="com.example.frank.spotifystreamer.ArtistFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:name="com.example.frank.spotifystreamer.MainActivity"
-    tools:layout="@layout/fragment_artist" />
+    tools:context="com.example.frank.spotifystreamer.ArtistFragment"
+    tools:layout="@android:layout/list_content" />

@@ -12,24 +12,46 @@ public class TrackParcelable implements Parcelable {
     private final String album;
     private final String pictureUrl;
     private final String previewUrl;
+    private final String artist;
+//    private final String pictureUrlLarge;
 
     private TrackParcelable(Parcel parcel) {
         this.name = parcel.readString();
         this.album = parcel.readString();
         this.pictureUrl = parcel.readString();
         this.previewUrl = parcel.readString();
+        this.artist = parcel.readString();
+//        this.pictureUrlLarge = parcel.readString();
     }
 
-    public TrackParcelable(String name, String album, String pictureUrl, String previewUrl) {
+    public TrackParcelable(String name, String album, String pictureUrl, String previewUrl,
+                           String artist) {
         this.name = name;
         this.album = album;
         this.pictureUrl = pictureUrl;
         this.previewUrl = previewUrl;
+        this.artist = artist;
+//        this.pictureUrlLarge = pictureUrlLarge;
     }
+
+
+    public String getName() {
+        return name;
+    }
+
+    public String getAlbum() {
+        return album;
+    }
+
+    public String getArtist() {return artist;}
 
     public String getPictureUrl() {
         return pictureUrl;
     }
+
+//    public String getPictureUrlLarge() {
+//        return pictureUrlLarge;
+//    }
 
     public String getPreviewUrl() {
         return previewUrl;
@@ -46,6 +68,8 @@ public class TrackParcelable implements Parcelable {
         parcel.writeString(album);
         parcel.writeString(pictureUrl);
         parcel.writeString(previewUrl);
+        parcel.writeString(artist);
+//        parcel.writeString(pictureUrlLarge);
     }
 
     public static final Parcelable.Creator<TrackParcelable> CREATOR = new Parcelable.Creator<TrackParcelable>(){
@@ -61,11 +85,4 @@ public class TrackParcelable implements Parcelable {
         }
     };
 
-    public String getName() {
-        return name;
-    }
-
-    public String getAlbum() {
-        return album;
-    }
 }

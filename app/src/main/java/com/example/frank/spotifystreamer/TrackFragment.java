@@ -1,0 +1,301 @@
+package com.example.frank.spotifystreamer;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import kaaes.spotify.webapi.android.SpotifyApi;
+import kaaes.spotify.webapi.android.SpotifyService;
+import kaaes.spotify.webapi.android.models.Track;
+import kaaes.spotify.webapi.android.models.Tracks;
+
+
+/**
+ * A placeholder fragment containing a simple view.
+ */
+public class TrackFragment extends Fragment {
+
+    private static final String LOG_TAG = TrackFragment.class.getSimpleName();
+    private static final String TRACK_LISTVIEW_STATE = "TRACK_LISTVIEW_STATE";
+//    private static final String TITLE_STATE= "TITLE_STATE";
+    public static final String ARTIST_PARCELABLE = "ARTIST_PARCELABLE";
+    private static final String SELECTED_KEY = "SELECTED_KEY";
+    private static final String PLAYER_TAG = "PLAYER_TAG";
+    public static final String SELECTED_TRACK = "SELECTED_TRACK";
+    private TrackAdapter mTrackAdapter;
+    private ArtistParcelable mArtist;
+    private ArrayList<TrackParcelable> mTracks;
+    private int mPosition;
+    private ListView mListView;
+
+    //TODO: does not work
+//    08-11 00:28:53.748  22964-22964/? D/Finsky﹕ [1] PackageVerificationReceiver.onReceive: Verification requested, id = 74
+//    08-11 00:28:54.376  22964-22964/? D/Finsky﹕ [1] PackageVerificationReceiver.onReceive: Verification requested, id = 74
+//    08-11 00:29:00.849  22143-22143/? W/ContextImpl﹕ Calling a method in the system process without a qualified user: android.app.ContextImpl.startService:1686 android.content.ContextWrapper.startService:515 android.content.ContextWrapper.startService:515 com.android.keychain.KeyChainBroadcastReceiver.onReceive:12 android.app.ActivityThread.handleReceiver:2579
+//    08-11 00:29:05.663  21950-21950/? I/AmazonVideo.connectivity﹕ NetworkConnectionManager$ConnectivityChangeReceiver.onReceive: Received CONNECTIVITY_ACTION intent. Refreshing network info.
+
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (PlayerFragment.TRACK_CHANGED.equals(intent.getAction())) {
+
+                int number = intent.getIntExtra(SELECTED_TRACK, 0);
+                Log.v(LOG_TAG, "onReceive, track changed: " + number
+                        + " (previously: " + mPosition + ")");
+                mPosition = number;
+                mListView.setSelection(mPosition);
+                mListView.smoothScrollToPosition(mPosition);
+            }
+        }
+    };
+    private LocalBroadcastManager mBroadcastManager;
+    private Context mContext;
+
+    public TrackFragment() {}
+
+
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        mContext = getActivity().getApplicationContext();
+
+        mTracks = new ArrayList<>();
+        mTrackAdapter = new TrackAdapter(getActivity());
+        Bundle args = getArguments();
+
+        mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
+
+        if (args != null && args.containsKey(ARTIST_PARCELABLE)){  // get artist from bundle
+            mArtist = args.getParcelable(ARTIST_PARCELABLE);
+        } else {
+            Log.e(LOG_TAG, "no artist-argument set - should never happen");
+            return;
+        }
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(TRACK_LISTVIEW_STATE)){
+            //restore tracks
+            mTracks = savedInstanceState.getParcelableArrayList(TRACK_LISTVIEW_STATE);
+            if (savedInstanceState.containsKey(SELECTED_KEY)) {
+                mPosition = savedInstanceState.getInt(SELECTED_KEY);
+            }
+        } else {    // nothing restored from state -> fetch tracks
+
+            // fill list
+            new FetchTrackTask().execute(mArtist.getId());
+        }
+
+
+
+    }
+
+    @Override
+    public void onResume() {
+        mBroadcastManager.registerReceiver(mReceiver,
+                new IntentFilter(PlayerFragment.TRACK_CHANGED));
+        super.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        Log.v(LOG_TAG, "on pause - unregisters receiver");
+        mBroadcastManager.unregisterReceiver(mReceiver);
+        super.onPause();
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+
+        View rootView = inflater.inflate(R.layout.fragment_track, container, false);
+
+        // listview to show tracks
+        mListView = (ListView) rootView.findViewById(R.id.listview_tracks);
+        mListView.setAdapter(mTrackAdapter);
+
+        if (!mTracks.isEmpty() && mTrackAdapter.isEmpty()){
+            mTrackAdapter.addAll(mTracks);
+        }
+
+        if (!mTrackAdapter.isEmpty() && mPosition != ListView.INVALID_POSITION){
+            mListView.smoothScrollToPosition(mPosition);
+        }
+
+        // try open uri in browser to play the track
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+//                String previewUrl = null;
+                // TODO: a content provider seems to be the better solution
+
+//                mPosition = position;
+                startPlayer(position);
+            }
+        });
+
+        return rootView;
+    }
+
+    private void startPlayer(int position) {
+        ArrayList<TrackParcelable> trackList = new ArrayList<>();
+        mPosition = position;
+        for (int i = 0; i < mTrackAdapter.getCount(); ++i) {
+            trackList.add(mTrackAdapter.getItem(i));
+        }
+
+        // TODO: use TwoPane from mainActivity ...
+        if (getResources().getBoolean(R.bool.large_layout)) {
+            // dialog over both views in same activity
+            Log.v(LOG_TAG, "in onItemClickListener - starting player dialog with track "
+                    + trackList.get(mPosition).getName());
+
+            FragmentManager fm = getActivity().getSupportFragmentManager();
+
+            PlayerFragment player = PlayerFragment.getInstance(trackList, mPosition);
+            player.show(fm, PLAYER_TAG);
+
+        } else {
+            // intent to new activity for small screens
+            Intent playerIntent = new Intent(getActivity(), PlayerActivity.class)
+                    .putParcelableArrayListExtra(PlayerFragment.TRACKS, trackList)
+                    .putExtra(PlayerFragment.CURRENT_TRACK, mPosition);
+            Log.v(LOG_TAG, "in onItemClickListener - starting player intent with track "
+                    + trackList.get(mPosition).getName());
+            startActivity(playerIntent);
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+
+        if (!mTracks.isEmpty()){
+            // array just working with casts...
+//            ArrayList<TrackParcelable> parcelables = new ArrayList<>();
+//            for (int i = 0; i<mTrackAdapter.getCount();++i){
+//                parcelables.add(mTrackAdapter.getItem(i));
+//            }
+            savedInstanceState.putParcelableArrayList(TRACK_LISTVIEW_STATE, mTracks);
+            savedInstanceState.putInt(SELECTED_KEY, mPosition);
+        }
+
+//        savedInstanceState.putCharSequence(TITLE_STATE, getActivity().getTitle());
+    }
+
+    private class FetchTrackTask extends AsyncTask<String, Void, ArrayList<TrackParcelable>> {
+
+        @Override
+        protected void onPostExecute(ArrayList<TrackParcelable> trackList) {
+            mTrackAdapter.clear();
+            // DONE: Notification for artists without toptracks, sample: Freaks in Love
+            if (trackList == null){
+                toastError(null);
+            } else {
+                mTracks = trackList;
+                mTrackAdapter.addAll(trackList);
+                if (trackList.size()<1){
+                    toastError("no top tracks found for artist");
+                }
+            }
+
+            mTrackAdapter.notifyDataSetChanged();
+        }
+
+        @Override
+        protected ArrayList<TrackParcelable> doInBackground(String... params) {
+
+            if (params.length == 0){
+                return null;
+            }
+
+            String artistId = params[0];
+
+            // wont be called every time :-)
+//            Log.v(LOG_TAG, "fetch tracks for artistId " + artistId);
+
+            SpotifyApi api = new SpotifyApi();
+            SpotifyService spotify = api.getService();
+
+            // country code is required
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            String countryCode = prefs.getString(getString(R.string.pref_country_key),
+                    getString(R.string.pref_country_default));
+
+            Map<String, Object> map = new HashMap<>();
+            map.put(getString(R.string.pref_country_key), countryCode);
+
+            try {
+                Tracks topTracks  = spotify.getArtistTopTrack(artistId, map);
+
+                if (topTracks == null){
+                    return null;
+                } else {
+                    if (topTracks.tracks.size()<1){
+                        return new ArrayList<TrackParcelable>();
+                    }
+                    Log.v(LOG_TAG, topTracks.tracks.size() + " topTracks found");
+                    return convertTracks(topTracks.tracks);
+                }
+
+            } catch (Exception e){
+                Log.e(LOG_TAG, "could not fetch tracks from spotify, artistId: " + artistId
+                        + " (Exception: " + e.getMessage() + ")");
+            }
+
+            return null;
+        }
+
+        /** converts spotify-wrapper-tracks to parcelable tracks
+        (containing name, album, albumImageUrl)*/
+        private ArrayList<TrackParcelable> convertTracks(List<Track> tracks) {
+            ArrayList<TrackParcelable> list = new ArrayList<>();
+            for (int i = 0; i<tracks.size();++i){
+                Track track = tracks.get(i);
+                list.add(new TrackParcelable(
+                        track.name,
+                        track.album.name,
+                        ImageHelper.getLargestImage(track.album.images),
+                        track.preview_url,
+                        mArtist.getName()
+                ));
+            }
+//            TrackParcelable[] result = list.toArray(new TrackParcelable[list.size()]);
+            return list;
+        }
+
+        private void toastError (String errorMsg){
+            Context context = getActivity();
+            CharSequence text;
+            if (errorMsg == null){
+                text = "Could not fetch top tracks from spotify!";
+            } else {
+                text = "Could not fetch top tracks from spotify (" + errorMsg + ")!";
+            }
+
+            Toast.makeText(context, text, Toast.LENGTH_LONG).show();
+        }
+    }
+}
