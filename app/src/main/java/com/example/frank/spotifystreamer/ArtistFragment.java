@@ -204,7 +204,7 @@ public class ArtistFragment extends Fragment {
                 Artist artist = artists.get(i);
                 list.add(new ArtistParcelable(
                         artist.name,
-                        ImageHelper.getSmallestMatchingImage(artist.images, iconSize),
+                        Util.getSmallestMatchingImage(artist.images, iconSize),
                         artist.id));
             }
 

@@ -36,12 +36,7 @@ import kaaes.spotify.webapi.android.models.Tracks;
 public class TrackFragment extends Fragment {
 
     private static final String LOG_TAG = TrackFragment.class.getSimpleName();
-    private static final String TRACK_LISTVIEW_STATE = "TRACK_LISTVIEW_STATE";
-//    private static final String TITLE_STATE= "TITLE_STATE";
-    public static final String ARTIST_PARCELABLE = "ARTIST_PARCELABLE";
-    private static final String SELECTED_KEY = "SELECTED_KEY";
-    private static final String PLAYER_TAG = "PLAYER_TAG";
-    public static final String SELECTED_TRACK = "SELECTED_TRACK";
+
     private TrackAdapter mTrackAdapter;
     private ArtistParcelable mArtist;
     private ArrayList<TrackParcelable> mTracks;
@@ -58,9 +53,9 @@ public class TrackFragment extends Fragment {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (PlayerFragment.TRACK_CHANGED.equals(intent.getAction())) {
+            if (Constants.ACTION_TRACK_CHANGED.equals(intent.getAction())) {
 
-                int number = intent.getIntExtra(SELECTED_TRACK, 0);
+                int number = intent.getIntExtra(Constants.EXTRA_TRACK_NUMBER, 0);
                 Log.v(LOG_TAG, "onReceive, track changed: " + number
                         + " (previously: " + mPosition + ")");
                 mPosition = number;
@@ -88,18 +83,19 @@ public class TrackFragment extends Fragment {
 
         mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
 
-        if (args != null && args.containsKey(ARTIST_PARCELABLE)){  // get artist from bundle
-            mArtist = args.getParcelable(ARTIST_PARCELABLE);
+        if (args != null && args.containsKey(Constants.ARGS_ARTIST_PARCELABLE)){  // get artist from bundle
+            mArtist = args.getParcelable(Constants.ARGS_ARTIST_PARCELABLE);
         } else {
             Log.e(LOG_TAG, "no artist-argument set - should never happen");
             return;
         }
 
-        if (savedInstanceState != null && savedInstanceState.containsKey(TRACK_LISTVIEW_STATE)){
+        if (savedInstanceState != null && savedInstanceState.containsKey(
+                Constants.STATE_TRACK_LISTVIEW)){
             //restore tracks
-            mTracks = savedInstanceState.getParcelableArrayList(TRACK_LISTVIEW_STATE);
-            if (savedInstanceState.containsKey(SELECTED_KEY)) {
-                mPosition = savedInstanceState.getInt(SELECTED_KEY);
+            mTracks = savedInstanceState.getParcelableArrayList(Constants.STATE_TRACK_LISTVIEW);
+            if (savedInstanceState.containsKey(Constants.STATE_SELECTED_TRACK)) {
+                mPosition = savedInstanceState.getInt(Constants.STATE_SELECTED_TRACK);
             }
         } else {    // nothing restored from state -> fetch tracks
 
@@ -114,7 +110,7 @@ public class TrackFragment extends Fragment {
     @Override
     public void onResume() {
         mBroadcastManager.registerReceiver(mReceiver,
-                new IntentFilter(PlayerFragment.TRACK_CHANGED));
+                new IntentFilter(Constants.ACTION_TRACK_CHANGED));
         super.onResume();
     }
 
@@ -175,13 +171,13 @@ public class TrackFragment extends Fragment {
             FragmentManager fm = getActivity().getSupportFragmentManager();
 
             PlayerFragment player = PlayerFragment.getInstance(trackList, mPosition);
-            player.show(fm, PLAYER_TAG);
+            player.show(fm, Constants.TAG_PLAYER);
 
         } else {
             // intent to new activity for small screens
             Intent playerIntent = new Intent(getActivity(), PlayerActivity.class)
-                    .putParcelableArrayListExtra(PlayerFragment.TRACKS, trackList)
-                    .putExtra(PlayerFragment.CURRENT_TRACK, mPosition);
+                    .putParcelableArrayListExtra(Constants.EXTRA_TRACKS, trackList)
+                    .putExtra(Constants.EXTRA_CURRENT_TRACK, mPosition);
             Log.v(LOG_TAG, "in onItemClickListener - starting player intent with track "
                     + trackList.get(mPosition).getName());
             startActivity(playerIntent);
@@ -198,8 +194,8 @@ public class TrackFragment extends Fragment {
 //            for (int i = 0; i<mTrackAdapter.getCount();++i){
 //                parcelables.add(mTrackAdapter.getItem(i));
 //            }
-            savedInstanceState.putParcelableArrayList(TRACK_LISTVIEW_STATE, mTracks);
-            savedInstanceState.putInt(SELECTED_KEY, mPosition);
+            savedInstanceState.putParcelableArrayList(Constants.STATE_TRACK_LISTVIEW, mTracks);
+            savedInstanceState.putInt(Constants.STATE_SELECTED_TRACK, mPosition);
         }
 
 //        savedInstanceState.putCharSequence(TITLE_STATE, getActivity().getTitle());
@@ -277,7 +273,7 @@ public class TrackFragment extends Fragment {
                 list.add(new TrackParcelable(
                         track.name,
                         track.album.name,
-                        ImageHelper.getLargestImage(track.album.images),
+                        Util.getLargestImage(track.album.images),
                         track.preview_url,
                         mArtist.getName()
                 ));

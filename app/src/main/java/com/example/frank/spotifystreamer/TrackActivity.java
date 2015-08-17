@@ -22,7 +22,7 @@ public class TrackActivity extends ActionBarActivity {
         Bundle args = new Bundle();
 
         Parcelable artist = getIntent().getParcelableExtra(INTENT_ARTIST_KEY);
-        args.putParcelable(TrackFragment.ARTIST_PARCELABLE, artist);
+        args.putParcelable(Constants.ARGS_ARTIST_PARCELABLE, artist);
         TrackFragment fragment = new TrackFragment();
         fragment.setArguments(args);
 

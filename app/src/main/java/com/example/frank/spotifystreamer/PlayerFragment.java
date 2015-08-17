@@ -34,25 +34,28 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         ServiceConnection, SeekBar.OnSeekBarChangeListener {
 
     private static final String LOG_TAG = PlayerFragment.class.getSimpleName();
-    public static final String TRACK_CHANGED = "TRACK_CHANGED";
-    //    private static PlayerFragment mFragment;
     private TrackParcelable[] mTracks;
     private View mRootView;
     private int mPosition;
     private TrackParcelable mTrack;
-    public static final String TRACKS = "TRACKS_EXTRA";
-    public static final String CURRENT_TRACK = "CURRENT_TRACK_EXTRA";
+
     private Context mContext;
     private PlayerService mPlayerService;
     private TextView mArtistView;
     private TextView mAlbumNameView;
     private ImageView mAlbumImageView;
     private TextView mTrackView;
+    private TextView mElapsedView;
+    private TextView mDurationView;
     private ImageButton mPreviousButton;
     private ImageButton mNextButton;
     private ImageButton mPlayButton;
     private SeekBar mSeekBar;
     private boolean mIsBound = false;
+    private boolean mStateIsPlaying = false;
+
+    private int mPositionInTrack = 0;
+    private int mDuration = Constants.TRACK_DEFAULT_LENGTH;   // workaround for unknown duration and division
 //    private boolean mIsInit = false;
 
 //    private IntentFilter receiverFilter;
@@ -94,23 +97,32 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 //        }
 //    }
 
-    private double mPositionInTrack = 0;
-    private double mDuration = 1;   // workaround for unknown duration and division
+
     // use broadcastReceiver for seekBar
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (PlayerService.PLAYER_TRACK_STATE.equals(intent.getAction())) {
-                mTrack = intent.getParcelableExtra(PlayerService.CURRENT_TRACK);
 
-                if (intent.hasExtra(PlayerService.TRACK_NUMBER)){
-                    int number = intent.getIntExtra(PlayerService.TRACK_NUMBER, -1);
+            if (Constants.ACTION_TRACK_STATE.equals(intent.getAction())) {
+                mTrack = intent.getParcelableExtra(Constants.EXTRA_CURRENT_TRACK);
+//
+                if (intent.hasExtra(Constants.EXTRA_TRACK_NUMBER)){
+                    int number = intent.getIntExtra(Constants.EXTRA_TRACK_NUMBER, -1);
 
                     if (number >=0 && number != mPosition) {
-                        sendChangedTrack(number);
+//                        sendChangedTrack(number);
 
                         mPosition = number;
                     }
+                }
+
+                if (intent.hasExtra(Constants.EXTRA_IS_PLAYING)){
+                    // set progress
+                    mPositionInTrack = intent.getIntExtra(Constants.EXTRA_CURRENT_TRACK_POSITION, 0) +
+                            Constants.UPDATE_INTERVAL;
+                    Log.v(LOG_TAG, "in updateProgressViews, progress: " + mPositionInTrack);
+                    mSeekBar.setProgress(mPositionInTrack);
+                    mElapsedView.setText(Util.formatTime(mPositionInTrack));
                 }
 
                 // maybe needed for on finish
@@ -121,32 +133,21 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
                     mPlayButton.setImageResource(android.R.drawable.ic_media_play);
                 }
 
-                mDuration = intent.getIntExtra(PlayerService.TRACK_DURATION, 1);
-                mPositionInTrack = intent.getIntExtra(PlayerService.TRACK_CURRENT_POSITION, 0);
-
-                // set progress in %
-                if (intent.getBooleanExtra(PlayerService.NEW_TRACK, true)) {
-                    // new track
-
-                    updateViewsWithCurrentTrack();
-                } else {
-                    // known track
-                    mSeekBar.setProgress((int) (100 * mPositionInTrack / mDuration));
-//                    mSeekBar.setProgress((int)mPositionInTrack);
-                }
 
             }
 
         }
     };
 
-    private void sendChangedTrack(int number) {
-        Log.v(LOG_TAG, "onReceive, track changed: " + number
-                + " (previously: " + mPosition + ")");
-        Intent tcIntent = new Intent(TRACK_CHANGED); // action, not tag...
-        tcIntent.putExtra(TrackFragment.SELECTED_TRACK, number);
-        mBroadcastManager.sendBroadcast(tcIntent);
-    }
+
+
+//    private void sendChangedTrack(int number) {
+//        Log.v(LOG_TAG, "onReceive, track changed: " + number
+//                + " (previously: " + mPosition + ")");
+//        Intent tcIntent = new Intent(Constants.TRACK_CHANGED); // action, not tag...
+//        tcIntent.putExtra(Constants.SELECTED_TRACK, number);
+//        mBroadcastManager.sendBroadcast(tcIntent);
+//    }
 
 
     @Override
@@ -157,22 +158,34 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
         mContext = getActivity().getApplicationContext();
 
-        Bundle args = getArguments();
-        if (args != null && args.containsKey(TRACKS)){
-
-            Parcelable[] objects = args.getParcelableArray(TRACKS);
-            mTracks = Arrays.asList(objects).toArray(new TrackParcelable[objects.length]);
-            mPosition = args.getInt(PlayerService.TRACK_NUMBER);
-            mTrack = mTracks[mPosition];
-            Log.v(LOG_TAG, " in onCreate with track " + mTrack.getName());
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey(Constants.STATE_TRACKS)) {
+                mTracks = (TrackParcelable[]) savedInstanceState.getParcelableArray(Constants.STATE_TRACKS);
+                mPosition = savedInstanceState.getInt(Constants.STATE_SELECTED_TRACK);
+                mPositionInTrack = savedInstanceState.getInt(Constants.STATE_CURRENT_TRACK_POSITION);
+                mDuration = savedInstanceState.getInt(Constants.STATE_DURATION,
+                        Constants.TRACK_DEFAULT_LENGTH);
+                mTrack = mTracks[mPosition];
+                mStateIsPlaying = savedInstanceState.getBoolean(Constants.STATE_IS_PLAYING);
+                Log.v(LOG_TAG, "state restored with position: " + mPositionInTrack
+                        + ", isPlaying: " + mStateIsPlaying);
+            }
         } else {
-            Log.v(LOG_TAG, " no args set - should never happen");
+            Bundle args = getArguments();
+            if (args != null && args.containsKey(Constants.ARGS_TRACKS)){
+                Parcelable[] objects = args.getParcelableArray(Constants.ARGS_TRACKS);
+                mTracks = Arrays.asList(objects).toArray(new TrackParcelable[objects.length]);
+                mPosition = args.getInt(Constants.ARGS_TRACK_NUMBER);
+                mTrack = mTracks[mPosition];
+                Log.v(LOG_TAG, " in onCreate with track " + mTrack.getName());
+            } else {
+                Log.v(LOG_TAG, " no args set - should never happen");
+            }
         }
 
 //        if (mPlayIntent == null){
         if (!mIsBound){
             startPlayerService();
-
         }
 
         mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
@@ -194,7 +207,7 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
     public void onResume() {
         Log.v(LOG_TAG, "on resume - registers receiver");
         mBroadcastManager.registerReceiver(mReceiver,
-                new IntentFilter(PlayerService.PLAYER_TRACK_STATE));
+                new IntentFilter(Constants.ACTION_TRACK_STATE));
         super.onResume();
     }
 
@@ -218,6 +231,8 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         mAlbumImageView = (ImageView) mRootView.findViewById(R.id.album_image);
         mSeekBar = (SeekBar) mRootView.findViewById(R.id.seek_bar);
         mSeekBar.setOnSeekBarChangeListener(this);
+        mElapsedView = (TextView) mRootView.findViewById(R.id.elapsed_time);
+        mDurationView = (TextView) mRootView.findViewById(R.id.duration);
         mTrackView = (TextView) mRootView.findViewById(R.id.track_name);
         mPreviousButton = (ImageButton) mRootView.findViewById(R.id.button_previous);
         mNextButton = (ImageButton) mRootView.findViewById(R.id.button_next);
@@ -231,15 +246,17 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         return mRootView;
     }
 
-    private void updateViewsWithCurrentTrack() {
-        Log.v(LOG_TAG, "in updateViewsWithCurrentTrack - updates are coming...");
 
-        mPositionInTrack = 0;
+    private void updateViewsWithCurrentTrack() {
+        Log.v(LOG_TAG, "in updateViewsWithCurrentTrack ");
+
+//        mPositionInTrack = 0;
         // artist name
         mArtistView.setText(mTrack.getArtist());
 
         // album name
         mAlbumNameView.setText(mTrack.getAlbum());
+
 
         // album image
         String url = mTrack.getPictureUrl();
@@ -253,8 +270,11 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         mTrackView.setText(mTrack.getName());
 
         // progress bar
-        mSeekBar.setProgress((int) (100 * mPositionInTrack / mDuration));
-        mSeekBar.setMax(100);
+        mSeekBar.setProgress(mPositionInTrack);
+        mSeekBar.setMax(mDuration);
+
+        mDurationView.setText(Util.formatTime(mDuration));
+        mElapsedView.setText(Util.formatTime(mPositionInTrack));
 //        mSeekBar.setProgress((int) mPositionInTrack);
 
         // buttons
@@ -335,55 +355,20 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         updateViewsWithCurrentTrack();
     }
 
-//    public void update(TrackParcelable[] tracks, int position){
-//
-//        mPosition = position;
-//
-//        if (tracks != null){
-//            mTracks = tracks;
-//            TrackParcelable track = tracks[position];
-//
-//            // start track anyway
-////            if (mTrack != null && track != null
-////                    && mTrack.getPreviewUrl() != null && track.getPreviewUrl() != null
-////                    && mTrack.getPreviewUrl().equals(track.getPictureUrl())){
-////
-////                // same title - use previous position, if not at the end
-////                Log.v(LOG_TAG, "update - same title");
-////                if (mPositionInTrack == mDuration){
-////                    mPositionInTrack = 0;
-////                }
-////            } else {
-////                Log.v(LOG_TAG, "update - other title");
-////                mTrack = track;
-////                mPositionInTrack = 0;
-////            }
-//            mTrack = track;
-//
-//            if (mPlayerService != null){
-////                mPlayerService.
-////                mPlayIntent = new Intent(mContext, PlayerService.class);
-////                mPlayIntent.putExtra(PlayerService.TRACK_NUMBER, mPosition);
-//                // use old intent to bind
-//
-//                Log.v(LOG_TAG, "update - playerService exists, try binding");
-//                mContext.bindService(mPlayIntent, this, Context.BIND_AUTO_CREATE);
-//            } else {
-//                Log.v(LOG_TAG, "update - playerService is null - has to start again...");
-//                startPlayerService();
-//            }
-//
-////            if (mPlayerService != null){
-////                mPlayerService.setmTracks(mTracks);
-////                mPlayerService.startTrack(mPosition);
-////                Log.v(LOG_TAG, "update - playerService exists");
-////            } else {
-////                mPlayIntent
-////                mContext.bindService(mPlayIntent, this, Context.BIND_AUTO_CREATE);
-////                Log.v(LOG_TAG, "update - playerService is null");
-////            }
-//        }
-//    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        Log.v(LOG_TAG, "onSaveInstanceState isPlaying: " + mPlayerService.isPlaying());
+        if (mTracks != null) {
+            outState.putParcelableArray(Constants.STATE_TRACKS, mTracks);
+            outState.putInt(Constants.STATE_SELECTED_TRACK, mPosition);
+            outState.putInt(Constants.STATE_DURATION, mDuration);
+            outState.putInt(Constants.STATE_CURRENT_TRACK_POSITION, mPositionInTrack);
+            outState.putBoolean(Constants.STATE_IS_PLAYING, mPlayerService.isPlaying());
+        }
+    }
 
     // singleton wont help
     public static PlayerFragment getInstance(ArrayList<TrackParcelable> trackList, int postion){
@@ -391,8 +376,8 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         TrackParcelable[] tracks = trackList.toArray(new TrackParcelable[trackList.size()]);
 
         Bundle args = new Bundle();
-        args.putParcelableArray(TRACKS, tracks);
-        args.putInt(PlayerService.TRACK_NUMBER, postion);
+        args.putParcelableArray(Constants.ARGS_TRACKS, tracks);
+        args.putInt(Constants.ARGS_TRACK_NUMBER, postion);
 
         PlayerFragment mFragment;
         Log.v(LOG_TAG, "getInstance - create new Fragment for track " + tracks[postion].getName());
@@ -469,7 +454,8 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        Log.v(LOG_TAG, "onServiceConnected");
+        Log.v(LOG_TAG, "onServiceConnected, isPlaying: "
+                + mStateIsPlaying + ", position: " + mPositionInTrack);
         // use binder to get service
         mPlayerService = ((PlayerService.PlayerBinder) service).getService();
         mIsBound = true;
@@ -477,6 +463,13 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
         mPlayerService.setmTracks(mTracks);
         mPlayerService.startTrack(mPosition);
+        if (mPositionInTrack>0){
+            mPlayerService.seekToPositon(mPositionInTrack);
+        }
+        if (mStateIsPlaying){
+            mPlayerService.resume();
+            mStateIsPlaying = false;
+        }
 //        // later?
 //        if (!mIsInit){
 //            mPlayerService.setmTracks(mTracks);
@@ -506,6 +499,6 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         //TODO: real integers ...
         Log.v(LOG_TAG, "onStopTrackingTouch " + seekBar.getProgress());
 //        mSeekBar.setProgress((int) (100 * mPositionInTrack / mDuration));
-        mPlayerService.seekToPositon((int) (seekBar.getProgress() * mDuration / 100 ));
+        mPlayerService.seekToPositon(seekBar.getProgress());
     }
 }

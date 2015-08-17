@@ -70,7 +70,7 @@ public class MainActivity extends ActionBarActivity implements ArtistFragment.Ca
     public void onItemSelected(ArtistParcelable artistParcelable) {
         if (mTwoPane){
             Bundle args = new Bundle();
-            args.putParcelable(TrackFragment.ARTIST_PARCELABLE, artistParcelable);
+            args.putParcelable(Constants.ARGS_ARTIST_PARCELABLE, artistParcelable);
 
             Fragment fragment = new TrackFragment();
             fragment.setArguments(args);

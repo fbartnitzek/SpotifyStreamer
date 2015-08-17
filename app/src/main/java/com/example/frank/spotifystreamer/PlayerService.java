@@ -21,18 +21,9 @@ import java.io.IOException;
  * Created by frank on 07.08.15.
  */
 public class PlayerService extends Service implements MediaPlayer.OnPreparedListener,
-        MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener {
+        MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
     private static final String LOG_TAG = PlayerService.class.getSimpleName();
-    public static final String PLAYER_TRACK_STATE = "PLAYER_TRACK_STATE";
 
-    public static final String TRACK_CURRENT_POSITION = "TRACK_CURRENT_POSITION";
-    public static final String TRACK_IS_PLAYING = "TRACK_IS_PLAYING ";
-    public static final String TRACK_NUMBER = "TRACK_NUMBER";
-    public static final String TRACK_DURATION = "TRACK_DURATION";
-    public static final String CURRENT_TRACK = "CURRENT_TRACK";
-    public static final String NEW_TRACK = "NEW TRACK";
-
-//    public static final String BROADCAST_SEEK = "BROADCAST_SEEK";
     private WifiManager.WifiLock mWifiLock;
     private final Handler mHandler = new Handler();
     private LocalBroadcastManager mBroadcastManager;
@@ -45,9 +36,6 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     private TrackParcelable mCurrentTrack;
     private int mSelectedMilliSeconds;
 //    private boolean mIsFullyLoaded = false;
-
-    private final static int UPDATE_INTERVAL = 300; //ms
-
 
     /*  states
         created => idle
@@ -73,14 +61,15 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
                         mWifiLock.acquire();
                     }
                     // broadcast intent to UI (fragment)
-                    Intent intent = new Intent(PLAYER_TRACK_STATE); // action, not tag...
-                    intent.putExtra(CURRENT_TRACK, mCurrentTrack);
-                    intent.putExtra(TRACK_NUMBER, mCurrentTrackIndex);
-                    intent.putExtra(TRACK_IS_PLAYING, mPlayer.isPlaying());
-                    intent.putExtra(TRACK_CURRENT_POSITION, mPlayer.getCurrentPosition());
-                    intent.putExtra(TRACK_DURATION, mPlayer.getDuration());
-                    intent.putExtra(NEW_TRACK, false);
-                    mBroadcastManager.sendBroadcast(intent);
+                    sendUpdate();
+//                    Intent intent = new Intent(Constants.ACTION_TRACK_STATE); // action, not tag...
+//                    intent.putExtra(Constants.EXTRA_CURRENT_TRACK, mCurrentTrack);
+//                    intent.putExtra(Constants.EXTRA_TRACK_NUMBER, mCurrentTrackIndex);
+//                    intent.putExtra(Constants.EXTRA_IS_PLAYING, mPlayer.isPlaying());
+//                    intent.putExtra(Constants.EXTRA_CURRENT_TRACK_POSITION, mPlayer.getCurrentPosition());
+//                    intent.putExtra(Constants.EXTRA_TRACK_DURATION, mPlayer.getDuration());
+////                    intent.putExtra(Constants.EXTRA_NEW_TRACK, false);
+//                    mBroadcastManager.sendBroadcast(intent);
                 } else {
                     if (mWifiLock.isHeld()){
                         mWifiLock.release();
@@ -89,12 +78,9 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
 
             }
-            mHandler.postDelayed(this, UPDATE_INTERVAL);
+            mHandler.postDelayed(this, Constants.UPDATE_INTERVAL);
         }
     };
-//    private Intent mSeekIntent;
-
-//    private NotificationManager mNotificationManager;
 
     public boolean isPlaying() {
         return mIsPlaying;
@@ -137,6 +123,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     public void resetPlayer() {
         Log.v(LOG_TAG, "resetting player");
+        mIsPlaying = false;
 
         mPlayer.reset();
     }
@@ -192,8 +179,17 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     }
 
     public void seekToPositon(int milliSeconds){
-        Log.v(LOG_TAG, "seeks to postion" + mCurrentTrack.getName() + " (" + milliSeconds + "ms)");
-        mPlayer.seekTo(milliSeconds);
+
+        if (mIsPlaying){
+            Log.v(LOG_TAG, "seeks to postion " + mCurrentTrack.getName()
+                    + " (" + milliSeconds + "ms)");
+            mPlayer.seekTo(milliSeconds);
+        } else {
+            Log.v(LOG_TAG, "waits to seek to postion " + mCurrentTrack.getName()
+                    + " (" + milliSeconds + "ms)");
+            mSelectedMilliSeconds = milliSeconds;
+        }
+
     }
 
     public void startTrack(int number) {
@@ -239,7 +235,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     public boolean onUnbind(Intent intent) {
         Log.v(LOG_TAG, "onUnbind");
         mIsPlaying = false;
-        mPlayer.stop();
+//        mPlayer.stop();
 //        mPlayer.release();    // lets application crash on reset
 //        mWifiLock.release();    // also onPause / onStop
         return true;    // will call onRebind instead
@@ -279,6 +275,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     public void onPrepared(MediaPlayer mp) {
         Log.v(LOG_TAG, "onPrepared");
 
+        mPlayer = mp;
         if (!mp.isPlaying()) {
             mp.start();
             if (mSelectedMilliSeconds>0){
@@ -289,22 +286,32 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         mIsPlaying = true;
 //        mIsFullyLoaded = true;
 
-        mHandler.postDelayed(mTrackUpdater, UPDATE_INTERVAL);
-        Intent intent = new Intent(PLAYER_TRACK_STATE);
-        intent.putExtra(TRACK_NUMBER, mCurrentTrackIndex);
-        intent.putExtra(TRACK_CURRENT_POSITION, 0);
-        intent.putExtra(TRACK_IS_PLAYING, mp.isPlaying());
-        intent.putExtra(TRACK_DURATION, mp.getDuration());
-        intent.putExtra(CURRENT_TRACK, mCurrentTrack);
-        intent.putExtra(NEW_TRACK, true);
+        mHandler.postDelayed(mTrackUpdater, Constants.UPDATE_INTERVAL);
+        sendUpdate();
+//        Intent intent = new Intent(Constants.ACTION_TRACK_STATE);
+//        intent.putExtra(Constants.EXTRA_TRACK_NUMBER, mCurrentTrackIndex);
+//        intent.putExtra(Constants.EXTRA_CURRENT_TRACK_POSITION, 0);
+//        intent.putExtra(Constants.EXTRA_IS_PLAYING, mp.isPlaying());
+//        intent.putExtra(Constants.EXTRA_TRACK_DURATION, mp.getDuration());
+//        intent.putExtra(Constants.EXTRA_CURRENT_TRACK, mCurrentTrack);
+//        intent.putExtra(Constants.EXTRA_NEW_TRACK, true);
+//        mBroadcastManager.sendBroadcast(intent);
+    }
+
+    private void sendUpdate(){
+        Intent intent = new Intent(Constants.ACTION_TRACK_STATE);
+        intent.putExtra(Constants.EXTRA_TRACK_NUMBER, mCurrentTrackIndex);
+        intent.putExtra(Constants.EXTRA_CURRENT_TRACK, mCurrentTrack);
+        intent.putExtra(Constants.EXTRA_IS_PLAYING, mPlayer.isPlaying());
+        if (mIsPlaying) {
+            intent.putExtra(Constants.EXTRA_CURRENT_TRACK_POSITION, mPlayer.getCurrentPosition());
+            intent.putExtra(Constants.EXTRA_TRACK_DURATION, mPlayer.getDuration());
+        }
+
+//        intent.putExtra(Constants.EXTRA_NEW_TRACK, true);
         mBroadcastManager.sendBroadcast(intent);
-
     }
 
-    @Override
-    public void onSeekComplete(MediaPlayer mp) {
-
-    }
 
     public class PlayerBinder extends Binder {
         PlayerService getService() {

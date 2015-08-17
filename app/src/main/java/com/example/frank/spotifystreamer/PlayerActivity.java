@@ -26,9 +26,10 @@ public class PlayerActivity extends ActionBarActivity{
 //        setContentView(R.layout.activity_player);
 
         Log.v(LOG_TAG, "activity started - parsing intent");
-        if (getIntent() != null && getIntent().hasExtra(PlayerFragment.TRACKS)) {
-            ArrayList<Parcelable> objectList = getIntent().getParcelableArrayListExtra(PlayerFragment.TRACKS);
-            int position = getIntent().getIntExtra(PlayerFragment.CURRENT_TRACK, 0);
+        if (getIntent() != null && getIntent().hasExtra(Constants.EXTRA_TRACKS)) {
+            ArrayList<Parcelable> objectList = getIntent().getParcelableArrayListExtra(
+                    Constants.EXTRA_TRACKS);
+            int position = getIntent().getIntExtra(Constants.EXTRA_CURRENT_TRACK, 0);
             ArrayList<TrackParcelable> trackList = new ArrayList<>();
             for (Parcelable object : objectList){
                 trackList.add((TrackParcelable) object);
@@ -58,7 +59,7 @@ public class PlayerActivity extends ActionBarActivity{
 //        FragmentManager fragmentManager = getSupportFragmentManager();
 ////        PlayerFragment newFragment = new PlayerFragment();
 ////        Bundle args = new Bundle();
-////        args.putParcelableArray(PlayerFragment.TRACKS, mTracks);
+////        args.putParcelableArray(PlayerFragment.EXTRA_TRACKS, mTracks);
 ////        newFragment.setArguments(args);
 //
 //        PlayerFragment.getInstance()

@@ -49,6 +49,29 @@
         android:layout_width="300dp"
         android:layout_height="wrap_content" />
 
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/elapsed_time"
+            android:layout_alignParentLeft="true"
+            android:paddingLeft="16dp"
+            android:text="00:00"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/duration"
+            android:layout_alignParentRight="true"
+            android:paddingRight="16dp"
+            android:text="00:30"/>
+
+    </RelativeLayout>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
