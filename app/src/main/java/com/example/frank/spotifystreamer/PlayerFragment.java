@@ -34,6 +34,7 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         ServiceConnection, SeekBar.OnSeekBarChangeListener {
 
     private static final String LOG_TAG = PlayerFragment.class.getSimpleName();
+    private static PlayerFragment mFragment = null;
     private TrackParcelable[] mTracks;
     private View mRootView;
     private int mPosition;
@@ -52,6 +53,10 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
     private ImageButton mPlayButton;
     private SeekBar mSeekBar;
     private boolean mIsBound = false;
+    private boolean mIsPaused = false;
+    private boolean mIsInit = false;
+
+
     private boolean mStateIsPlaying = false;
 
     private int mPositionInTrack = 0;
@@ -98,6 +103,30 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 //    }
 
 
+    // singleton wont help
+    public static PlayerFragment getInstance(ArrayList<TrackParcelable> trackList, int postion){
+
+        TrackParcelable[] tracks = trackList.toArray(new TrackParcelable[trackList.size()]);
+
+        Bundle args = new Bundle();
+        args.putParcelableArray(Constants.ARGS_TRACKS, tracks);
+        args.putInt(Constants.ARGS_TRACK_NUMBER, postion);
+
+        if (mFragment == null){
+            mFragment = new PlayerFragment();
+            Log.v(LOG_TAG, "getInstance - create new Fragment for track " + tracks[postion].getName());
+        } else {
+            Log.v(LOG_TAG, "getInstance - used singelton-Fragment for track " + tracks[postion].getName());
+        }
+//        PlayerFragment mFragment;
+
+
+        mFragment.setArguments(args);
+
+        return mFragment;
+    }
+
+
     // use broadcastReceiver for seekBar
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -133,7 +162,6 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
                     mPlayButton.setImageResource(android.R.drawable.ic_media_play);
                 }
             }
-
         }
     };
 
@@ -154,7 +182,9 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
         // init service later
 
-        mContext = getActivity().getApplicationContext();
+        // maybe better?
+//        mContext = getActivity().getApplicationContext();
+        mContext = getActivity();
 
         if (savedInstanceState != null) {
             if (savedInstanceState.containsKey(Constants.STATE_TRACKS)) {
@@ -164,7 +194,11 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
                 mDuration = savedInstanceState.getInt(Constants.STATE_DURATION,
                         Constants.TRACK_DEFAULT_LENGTH);
                 mTrack = mTracks[mPosition];
-                mStateIsPlaying = savedInstanceState.getBoolean(Constants.STATE_IS_PLAYING);
+//                mStateIsPlaying = savedInstanceState.getBoolean(Constants.STATE_IS_PLAYING);
+                mIsInit = savedInstanceState.getBoolean(Constants.STATE_IS_INIT);
+                mIsBound = savedInstanceState.getBoolean(Constants.STATE_IS_BOUND);
+                mIsPaused = savedInstanceState.getBoolean(Constants.STATE_IS_PAUSED);
+
                 Log.v(LOG_TAG, "state restored with position: " + mPositionInTrack
                         + ", isPlaying: " + mStateIsPlaying);
             }
@@ -182,37 +216,39 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         }
 
 //        if (mPlayIntent == null){
-        if (!mIsBound){
-            startPlayerService();
-        }
+//        if (!mIsBound){
+//            startPlayerService();
+//        }
 
         mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
     }
 
-    private void startPlayerService() {
-//        mPlayIntent = new Intent(mContext, PlayerService.class);
-//        mPlayIntent.putExtra(PlayerService.TRACK_NUMBER, mPosition);
-//        mContext.startService(mPlayIntent);
-//        mContext.bindService(mPlayIntent, this, Context.BIND_AUTO_CREATE);
-        Intent intent = new Intent(mContext, PlayerService.class);
-        mContext.startService(intent);
-        mContext.bindService(intent, this, Context.BIND_AUTO_CREATE);
-
-        Log.v(LOG_TAG, " in OnCreate - service should be started and binded anytime soon");
-    }
+//    private void startPlayerService() {
+////        mPlayIntent = new Intent(mContext, PlayerService.class);
+////        mPlayIntent.putExtra(PlayerService.TRACK_NUMBER, mPosition);
+////        mContext.startService(mPlayIntent);
+////        mContext.bindService(mPlayIntent, this, Context.BIND_AUTO_CREATE);
+//        Intent intent = new Intent(mContext, PlayerService.class);
+//        mContext.startService(intent);
+//        mContext.bindService(intent, this, Context.BIND_AUTO_CREATE);
+//
+//        Log.v(LOG_TAG, " in OnCreate - service should be started and binded anytime soon");
+//    }
 
     @Override
     public void onResume() {
-        Log.v(LOG_TAG, "on resume - registers receiver");
-        mBroadcastManager.registerReceiver(mReceiver,
-                new IntentFilter(Constants.ACTION_TRACK_STATE));
+        Log.v(LOG_TAG, "on resume ");
+        // to onStart
+//        mBroadcastManager.registerReceiver(mReceiver,
+//                new IntentFilter(Constants.ACTION_TRACK_STATE));
         super.onResume();
     }
 
     @Override
     public void onPause() {
-        Log.v(LOG_TAG, "on pause - unregisters receiver");
-        mBroadcastManager.unregisterReceiver(mReceiver);
+        // to onStop
+        Log.v(LOG_TAG, "on pause ");
+//        mBroadcastManager.unregisterReceiver(mReceiver);
         super.onPause();
     }
 
@@ -235,6 +271,10 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         mPreviousButton = (ImageButton) mRootView.findViewById(R.id.button_previous);
         mNextButton = (ImageButton) mRootView.findViewById(R.id.button_next);
         mPlayButton = (ImageButton) mRootView.findViewById(R.id.button_play);
+
+        if (!mIsInit) {
+            Log.v(LOG_TAG, "might be TODO: init tracks and position");
+        }
 
         if (mTrack != null) {
             // TODO: needs knowledge of track-infos (position/duration) ... available?
@@ -303,11 +343,12 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
         Log.v(LOG_TAG, "onStart");
 
-        if (!mIsBound){
-            Intent intent = new Intent(mContext, PlayerService.class);
-            mContext.bindService(intent, this, Context.BIND_AUTO_CREATE);
+//        if (!mIsBound){
+        Intent intent = new Intent(mContext, PlayerService.class);
+        mContext.startService(intent);
+        mContext.bindService(intent, this, Context.BIND_AUTO_CREATE);
 
-        }
+//        }
 
 //        if (!mIsBound) {
 //            mPlayIntent = new Intent(mContext, PlayerService.class);
@@ -315,6 +356,15 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 //            getActivity().startService(mPlayIntent);
 //        }
 
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        Log.v(LOG_TAG, "onStop");
+        mContext.unbindService(this);
+        mIsBound = false;
+        mBroadcastManager.unregisterReceiver(mReceiver);
     }
 
     @Override
@@ -329,10 +379,11 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         // onCreate: mContext.startService(mPlayIntent);
         //        mContext.bindService(mPlayIntent, this, Context.BIND_AUTO_CREATE);
         //http://code.tutsplus.com/tutorials/create-a-music-player-on-android-song-playback--mobile-22778
-        Log.v(LOG_TAG, "onDestroyView");
+        Log.v(LOG_TAG, "onDestroy");
 
-        mContext.unbindService(this);
-        mIsBound = false;
+        // at onStop
+//        mContext.unbindService(this);
+//        mIsBound = false;
 
 
 //        if (mPlayerService != null) {
@@ -344,11 +395,14 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         super.onDestroy();
     }
 
-    private void startNewTrack(int number) {
-        mPosition = number;
-        Log.v(LOG_TAG, "startNewTrack " + number);
+    private void startNewTrack() {
+
+        Log.v(LOG_TAG, "startNewTrack " + mPosition);
         mPlayerService.startTrack(mPosition);
         mPositionInTrack = 0;
+        mIsInit = true;
+        mIsPaused = false;
+
         updateViewsWithCurrentTrack();
     }
 
@@ -364,45 +418,35 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
             outState.putInt(Constants.STATE_DURATION, mDuration);
             outState.putInt(Constants.STATE_CURRENT_TRACK_POSITION, mPositionInTrack);
             outState.putBoolean(Constants.STATE_IS_PLAYING, mPlayerService.isPlaying());
+            outState.putBoolean(Constants.STATE_IS_BOUND, mIsBound);
+            outState.putBoolean(Constants.STATE_IS_INIT, mIsInit);
+            outState.putBoolean(Constants.STATE_IS_PAUSED, mIsPaused);
         }
-    }
-
-    // singleton wont help
-    public static PlayerFragment getInstance(ArrayList<TrackParcelable> trackList, int postion){
-
-        TrackParcelable[] tracks = trackList.toArray(new TrackParcelable[trackList.size()]);
-
-        Bundle args = new Bundle();
-        args.putParcelableArray(Constants.ARGS_TRACKS, tracks);
-        args.putInt(Constants.ARGS_TRACK_NUMBER, postion);
-
-        PlayerFragment mFragment;
-        Log.v(LOG_TAG, "getInstance - create new Fragment for track " + tracks[postion].getName());
-        mFragment = new PlayerFragment();
-        mFragment.setArguments(args);
-
-        return mFragment;
     }
 
     @Override
     public void onClick(View view) {
 
-        switch (view.getId()){
+        if (mPlayerService == null) {
+            return;
+        }
+
+        switch (view.getId()) {
 
             case R.id.button_previous:
-                if (mPosition>0){
+                if (mPosition > 0) {
                     --mPosition;
                 } else {
-                    mPosition = mTracks.length-1;
+                    mPosition = mTracks.length - 1;
                 }
 
+                mIsInit = false;
+                mIsPaused = true;
                 mTrack = mTracks[mPosition];
                 Log.v(LOG_TAG, "previous clicked - playing previous track " + mTrack.getName());
 
-                if (mPlayerService != null){
+                startNewTrack();
 
-                    startNewTrack(mPosition);
-                }
 
                 // TODO: show the changed track in other fragment ...
 
@@ -410,42 +454,52 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
             case R.id.button_play:
 
-                if (mPlayerService != null){
+                if (mPlayerService != null) {
                     Log.v(LOG_TAG, "buttonPlay - isBound=" + mIsBound
                             + ", isPlaying=" + mPlayerService.isPlaying());
-                    if (!mIsBound){
+                    if (!mIsInit) {
                         Log.v(LOG_TAG, "buttonPlay - starts new track " + mTracks[mPosition]);
-                        startNewTrack(mPosition);
+                        startNewTrack();
                     } else {
-                        if (mPlayerService.isPlaying()){
+                        if (!mIsPaused) {
                             Log.v(LOG_TAG, "buttonPlay - pauses");
-                            mPlayButton.setImageResource(android.R.drawable.ic_media_play);
+//                            mPlayButton.setImageResource(android.R.drawable.ic_media_play);
+                            mIsPaused = true;
                             mPlayerService.pause();
                         } else {
                             Log.v(LOG_TAG, "buttonPlay - resumes");
-                            mPlayButton.setImageResource(android.R.drawable.ic_media_pause);
+//                            mPlayButton.setImageResource(android.R.drawable.ic_media_pause);
+                            mIsPaused = false;
                             mPlayerService.resume();
                         }
                     }
 
                 }
 
-
                 break;
             case R.id.button_next:
-                if (mPosition<mTracks.length-1){
+                if (mPosition < mTracks.length - 1) {
                     ++mPosition;
                 } else {
                     mPosition = 0;
                 }
 
                 mTrack = mTracks[mPosition];
+                mIsInit = false;
+                mIsPaused = true;
                 Log.v(LOG_TAG, "next clicked - playing next track " + mTrack.getName());
-                if (mPlayerService != null){
-                    startNewTrack(mPosition);
-                }
+
+                startNewTrack();
+
 
                 break;
+        }
+
+        // reset play/pause buttons
+        if (mIsPaused){
+            mPlayButton.setImageResource(android.R.drawable.ic_media_play);
+        } else {
+            mPlayButton.setImageResource(android.R.drawable.ic_media_pause);
         }
     }
 
@@ -456,24 +510,29 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         // use binder to get service
         mPlayerService = ((PlayerService.PlayerBinder) service).getService();
         mIsBound = true;
-//        mIsInit = true;
 
-        mPlayerService.setmTracks(mTracks);
-        mPlayerService.startTrack(mPosition);
-        if (mPositionInTrack>0){
-            mPlayerService.seekToPositon(mPositionInTrack);
-        }
-        if (mStateIsPlaying){
-            mPlayerService.resume();
-            mStateIsPlaying = false;
-        }
-//        // later?
-//        if (!mIsInit){
-//            mPlayerService.setmTracks(mTracks);
-//            mPlayerService.startTrack(mPosition);
-//            mPlayerService.initPlayer();
-//            mIsInit = true;
+//        mPlayerService.setmTracks(mTracks);
+//        mPlayerService.startTrack(mPosition);
+//        if (mPositionInTrack>0){
+//            mPlayerService.seekToPositon(mPositionInTrack);
 //        }
+//        if (mStateIsPlaying){
+//            mPlayerService.resume();
+//            mStateIsPlaying = false;
+//        }
+
+
+        // lets try again?
+        if (!mIsInit){
+            mPlayerService.setmTracks(mTracks);
+            mPlayerService.startTrack(mPosition);
+            mIsInit = true;
+            mIsPaused = false;
+        }
+
+        // register receiver
+        mBroadcastManager.registerReceiver(mReceiver,
+                new IntentFilter(Constants.ACTION_TRACK_STATE));
     }
 
     @Override

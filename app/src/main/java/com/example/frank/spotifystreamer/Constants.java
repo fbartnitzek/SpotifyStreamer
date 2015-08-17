@@ -47,4 +47,9 @@ public class Constants {
     public static final String STATE_CURRENT_TRACK_POSITION = "STATE_CURRENT_TRACK_POSITION";
     public static final String STATE_DURATION = "STATE_DURATION";
     public static final String STATE_IS_PLAYING = "STATE_IS_PLAYING";
+    public static final String STATE_IS_INIT = "STATE_IS_INIT" ;
+
+    public static final String STATE_IS_BOUND = "STATE_IS_BOUND";
+    public static final java.lang.String STATE_IS_PAUSED = "STATE_IS_PAUSED";
+
 }

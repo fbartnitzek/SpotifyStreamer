@@ -31,10 +31,17 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     private MediaPlayer mPlayer;
     private TrackParcelable[] mTracks;
     private int mCurrentTrackIndex;
-    private boolean mIsPlaying = false;
+
     private final IBinder mPlayerBinder = new PlayerBinder();
     private TrackParcelable mCurrentTrack;
     private int mSelectedMilliSeconds;
+
+    // store all ...
+    private boolean mIsPlaying = false;
+    private boolean mStateIsComplete;
+    private int mStateProgress;
+
+
 //    private boolean mIsFullyLoaded = false;
 
     /*  states
@@ -46,7 +53,6 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         seekTo ...
         stop  => stopped
      */
-
 
     private Runnable mTrackUpdater = new Runnable() {
         @Override
@@ -82,9 +88,38 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         }
     };
 
-    public boolean isPlaying() {
-        return mIsPlaying;
+    public class PlayerBinder extends Binder {
+        PlayerService getService() {
+            Log.v(LOG_TAG, "in PlayerBinder.getService - returning PlayerService");
+            return PlayerService.this;
+        }
     }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.v(LOG_TAG, "onBind");
+        return mPlayerBinder;
+    }
+
+    @Override
+    public void onRebind(Intent intent) {
+        Log.v(LOG_TAG, "onRebind");
+        super.onRebind(intent);
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        Log.v(LOG_TAG, "onUnbind");
+        mIsPlaying = false;
+//        mPlayer.stop();
+//        mPlayer.release();    // lets application crash on reset
+//        mWifiLock.release();    // also onPause / onStop
+//        return true;    // will call onRebind instead
+        return super.onUnbind(intent);
+    }
+
+
 
     @Override
     public void onCreate() {
@@ -93,6 +128,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
 //        mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
+        // maybe to early
         initPlayer();
 
         // use broadcast manager for seekbar
@@ -119,45 +155,6 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         // maybe earlier...
         mHandler.removeCallbacks(mTrackUpdater);
 
-    }
-
-    public void resetPlayer() {
-        Log.v(LOG_TAG, "resetting player");
-        mIsPlaying = false;
-
-        mPlayer.reset();
-    }
-
-    private void initPlayer() {
-        Log.v(LOG_TAG, "initializing player");
-//        mSelectedMilliSeconds = 0;
-        if (mPlayer != null){
-            mPlayer.release();
-        }
-        mPlayer = new MediaPlayer();
-
-        mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
-        mPlayer.setOnPreparedListener(this);
-        mPlayer.setOnCompletionListener(this);
-        mPlayer.setOnErrorListener(this);
-//        mPlayer.setOnSeekCompleteListener(this);
-//        mPlayer.setOnInfoListener(this);
-
-//        mPlayer.reset();
-        resetPlayer();
-
-
-        if (mWifiLock == null){
-            mWifiLock = ((WifiManager) getSystemService(Context.WIFI_SERVICE))
-                    .createWifiLock(WifiManager.WIFI_MODE_FULL, "mylock");
-        } else {
-            if (!mWifiLock.isHeld()){
-                mWifiLock.acquire();
-            }
-        }
-
-        Log.v(LOG_TAG, "initialized player");
     }
 
     public void setmTracks(TrackParcelable[] mTracks) {
@@ -192,11 +189,54 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     }
 
+    private void initPlayer() {
+        Log.v(LOG_TAG, "initializing player");
+//        mSelectedMilliSeconds = 0;
+        mStateProgress = 0;
+        mIsPlaying = false;
+        mStateIsComplete = false;
+
+        if (mPlayer != null){
+            mPlayer.release();
+        }
+        mPlayer = new MediaPlayer();
+
+        mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
+        mPlayer.setOnPreparedListener(this);
+        mPlayer.setOnCompletionListener(this);
+        mPlayer.setOnErrorListener(this);
+
+//        mPlayer.reset();
+//        resetPlayer();
+
+        if (mWifiLock == null){
+            mWifiLock = ((WifiManager) getSystemService(Context.WIFI_SERVICE))
+                    .createWifiLock(WifiManager.WIFI_MODE_FULL, "mylock");
+        } else {
+            if (!mWifiLock.isHeld()){
+                mWifiLock.acquire();
+            }
+        }
+
+        Log.v(LOG_TAG, "initialized player");
+    }
+
+//    public void resetPlayer() {
+//        Log.v(LOG_TAG, "resetting player");
+//        mIsPlaying = false;
+//
+//        mPlayer.reset();
+//    }
+
     public void startTrack(int number) {
 
 //        Log.v(LOG_TAG, "startTrack tracks: " + mTracks.toString());
 //        initPlayer();
-        resetPlayer();
+//        resetPlayer();
+
+        initPlayer();
+
         mCurrentTrackIndex = number;
         mCurrentTrack = mTracks[number];
 
@@ -215,44 +255,42 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     }
 
-
-    @Nullable
     @Override
-    public IBinder onBind(Intent intent) {
-        Log.v(LOG_TAG, "onBind");
-        return mPlayerBinder;
+    public void onPrepared(MediaPlayer mp) {
+        Log.v(LOG_TAG, "onPrepared");
+
+        if (!mp.isPlaying()) {
+            mp.start();
+            if (mSelectedMilliSeconds>0){
+                mp.seekTo(mSelectedMilliSeconds);
+                mSelectedMilliSeconds = 0;
+            }
+        }
+        mIsPlaying = true;
+//        mIsFullyLoaded = true;
+
+        mHandler.postDelayed(mTrackUpdater, Constants.UPDATE_INTERVAL);
+        sendUpdate();
     }
 
-    @Override
-    public void onRebind(Intent intent) {
-        Log.v(LOG_TAG, "onRebind");
-        super.onRebind(intent);
-    }
-
-
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-        Log.v(LOG_TAG, "onUnbind");
-        mIsPlaying = false;
-//        mPlayer.stop();
-//        mPlayer.release();    // lets application crash on reset
-//        mWifiLock.release();    // also onPause / onStop
-        return true;    // will call onRebind instead
-    }
 
     @Override
     public void onCompletion(MediaPlayer mp) {
 
+        mStateIsComplete = true;
+        mIsPlaying = false;
+        // release and GC
+        mPlayer.release();
+        mPlayer = null;
+
+        Log.v(LOG_TAG, "onCompletion - stop player");
+
 //        if (mp.isPlaying()){
-        if (mIsPlaying){
-            mp.stop();
-            mIsPlaying = false;
-        }
-
+//        if (mIsPlaying) {
+//            mp.stop();
+//            mIsPlaying = false;
+//        }
 //        this.stopSelf(); // would kill service after first track...
-
-        Log.v(LOG_TAG, "onCompletion");
     }
 
 
@@ -271,32 +309,7 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         return false;
     }
 
-    @Override
-    public void onPrepared(MediaPlayer mp) {
-        Log.v(LOG_TAG, "onPrepared");
 
-        mPlayer = mp;
-        if (!mp.isPlaying()) {
-            mp.start();
-            if (mSelectedMilliSeconds>0){
-                mp.seekTo(mSelectedMilliSeconds);
-                mSelectedMilliSeconds = 0;
-            }
-        }
-        mIsPlaying = true;
-//        mIsFullyLoaded = true;
-
-        mHandler.postDelayed(mTrackUpdater, Constants.UPDATE_INTERVAL);
-        sendUpdate();
-//        Intent intent = new Intent(Constants.ACTION_TRACK_STATE);
-//        intent.putExtra(Constants.EXTRA_TRACK_NUMBER, mCurrentTrackIndex);
-//        intent.putExtra(Constants.EXTRA_CURRENT_TRACK_POSITION, 0);
-//        intent.putExtra(Constants.EXTRA_IS_PLAYING, mp.isPlaying());
-//        intent.putExtra(Constants.EXTRA_TRACK_DURATION, mp.getDuration());
-//        intent.putExtra(Constants.EXTRA_CURRENT_TRACK, mCurrentTrack);
-//        intent.putExtra(Constants.EXTRA_NEW_TRACK, true);
-//        mBroadcastManager.sendBroadcast(intent);
-    }
 
     private void sendUpdate(){
         Intent intent = new Intent(Constants.ACTION_TRACK_STATE);
@@ -313,11 +326,16 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
     }
 
 
-    public class PlayerBinder extends Binder {
-        PlayerService getService() {
-            Log.v(LOG_TAG, "in PlayerBinder.getService - returning PlayerService");
-            return PlayerService.this;
-        }
+    public int getStateProgress() {
+        return mStateProgress;
+    }
+
+    public boolean isStateIsComplete() {
+        return mStateIsComplete;
+    }
+
+    public boolean isPlaying() {
+        return mIsPlaying;
     }
 
 }
