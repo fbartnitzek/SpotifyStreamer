@@ -132,8 +132,6 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
                     //use pause button
                     mPlayButton.setImageResource(android.R.drawable.ic_media_play);
                 }
-
-
             }
 
         }
@@ -275,7 +273,6 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
         mDurationView.setText(Util.formatTime(mDuration));
         mElapsedView.setText(Util.formatTime(mPositionInTrack));
-//        mSeekBar.setProgress((int) mPositionInTrack);
 
         // buttons
         mPreviousButton.setOnClickListener(this);

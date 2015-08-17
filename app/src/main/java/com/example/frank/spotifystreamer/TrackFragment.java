@@ -145,7 +145,6 @@ public class TrackFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
 //                String previewUrl = null;
-                // TODO: a content provider seems to be the better solution
 
 //                mPosition = position;
                 startPlayer(position);
