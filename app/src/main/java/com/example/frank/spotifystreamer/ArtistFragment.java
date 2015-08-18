@@ -29,7 +29,7 @@ import kaaes.spotify.webapi.android.models.ArtistsPager;
  */
 public class ArtistFragment extends Fragment {
 
-    private static final String LOG_TAG = ArtistFragment.class.getSimpleName();
+    private static final String LOG_TAG = ArtistFragment.class.getName();
     private static final String ARTIST_LISTVIEW_STATE = "ARTIST_LISTVIEW_STATE";
     private static final String SELECTED_KEY = "SELECTED_KEY";
     private ArtistAdapter mArtistAdapter;
@@ -52,6 +52,7 @@ public class ArtistFragment extends Fragment {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.v(LOG_TAG, "onCreate");
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
     }
@@ -59,6 +60,8 @@ public class ArtistFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
+        Log.v(LOG_TAG, "onCreateView");
 
         iconSize = getActivity().getResources().getDimension(R.dimen.artist_image_size);
         mArtistAdapter = new ArtistAdapter(getActivity());
@@ -99,8 +102,9 @@ public class ArtistFragment extends Fragment {
         mListView = (ListView) rootView.findViewById(R.id.listview_artists);
         mListView.setAdapter(mArtistAdapter);
 
-        if (savedInstanceState != null){
+        if (savedInstanceState != null) {
             if (savedInstanceState.containsKey(ARTIST_LISTVIEW_STATE)) {
+                Log.v(LOG_TAG, "onCreateView - restore artists");
                 // restore artist list
                 ArrayList<ArtistParcelable> allArtists =
                         savedInstanceState.getParcelableArrayList(ARTIST_LISTVIEW_STATE);
@@ -109,8 +113,9 @@ public class ArtistFragment extends Fragment {
                 }
             }
             if (savedInstanceState.containsKey(SELECTED_KEY)) {
+                Log.v(LOG_TAG, "onCreateView - restore position");
                 mPosition = savedInstanceState.getInt(SELECTED_KEY);
-                if (mPosition != ListView.INVALID_POSITION){
+                if (mPosition != ListView.INVALID_POSITION) {
                     mListView.smoothScrollToPosition(mPosition);
                 }
             }
@@ -135,7 +140,7 @@ public class ArtistFragment extends Fragment {
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
-
+        Log.v(LOG_TAG, "onSaveInstanceState");
         if (mArtistAdapter.isEmpty()){
             return;
         }
@@ -154,6 +159,7 @@ public class ArtistFragment extends Fragment {
 
         @Override
         protected void onPostExecute(ArtistParcelable[] artistParcelables) {
+            Log.v(LOG_TAG, "onPostExecute");
             mArtistAdapter.clear();
             if (artistParcelables != null){
                 mArtistAdapter.addAll(artistParcelables);
@@ -166,7 +172,7 @@ public class ArtistFragment extends Fragment {
         @Override
         protected ArtistParcelable[] doInBackground(String... params) {
             // void seems to be no valid option
-
+            Log.v(LOG_TAG, "doInBackground");
             if (params.length == 0){
                 return null;
             }

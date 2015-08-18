@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -11,7 +12,7 @@ import android.view.MenuItem;
 public class MainActivity extends ActionBarActivity implements ArtistFragment.Callback{
 
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
-    private final String LOG_TAG = MainActivity.class.getSimpleName();
+    private final String LOG_TAG = MainActivity.class.getName();
 
     private boolean mTwoPane;
 
@@ -25,10 +26,13 @@ public class MainActivity extends ActionBarActivity implements ArtistFragment.Ca
             mTwoPane = true;
 
             if (savedInstanceState == null) {
+                Log.v(LOG_TAG, "onCreate - new fragment");
                 getSupportFragmentManager().beginTransaction()
                         .replace(R.id.track_detail_container, new TrackFragment(),
                                 DETAILFRAGMENT_TAG)
                         .commit();
+            } else {
+                Log.v(LOG_TAG, "onCreate - saved state ");
             }
         } else {
             mTwoPane =false;
@@ -69,6 +73,7 @@ public class MainActivity extends ActionBarActivity implements ArtistFragment.Ca
     @Override
     public void onItemSelected(ArtistParcelable artistParcelable) {
         if (mTwoPane){
+            Log.v(LOG_TAG, "onItemSelected - tablet");
             Bundle args = new Bundle();
             args.putParcelable(Constants.ARGS_ARTIST_PARCELABLE, artistParcelable);
 
@@ -80,6 +85,7 @@ public class MainActivity extends ActionBarActivity implements ArtistFragment.Ca
                     .commit();
 
         } else {
+            Log.v(LOG_TAG, "onItemSelected - mobile");
             // use parcelableArtist directly
             Intent trackIntent = new Intent(this, TrackActivity.class)
                     .putExtra(TrackActivity.INTENT_ARTIST_KEY, artistParcelable);

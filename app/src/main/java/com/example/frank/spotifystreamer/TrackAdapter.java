@@ -15,7 +15,7 @@ import com.squareup.picasso.Picasso;
  */
 class TrackAdapter extends ArrayAdapter<TrackParcelable> {
 
-    private static final String LOG_TAG = TrackAdapter.class.getSimpleName();
+    private static final String LOG_TAG = TrackAdapter.class.getName();
     private final Activity activity;
 
     public TrackAdapter(Activity activity) {

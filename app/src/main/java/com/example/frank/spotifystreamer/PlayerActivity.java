@@ -15,7 +15,7 @@ import java.util.ArrayList;
 public class PlayerActivity extends ActionBarActivity{
 
 
-    private static final String LOG_TAG = PlayerActivity.class.getSimpleName();
+    private static final String LOG_TAG = PlayerActivity.class.getName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +24,29 @@ public class PlayerActivity extends ActionBarActivity{
 
         Log.v(LOG_TAG, "activity started - parsing intent");
 
+//        Bundle args = new Bundle();
+//        ArrayList<Parcelable> objectList = getIntent().getParcelableArrayListExtra(
+//                Constants.EXTRA_TRACKS);
+//        int position = getIntent().getIntExtra(Constants.EXTRA_CURRENT_TRACK, 0);
+//        ArrayList<TrackParcelable> trackList = new ArrayList<>();
+//        for (Parcelable object : objectList){
+//            trackList.add((TrackParcelable) object);
+//        }
+//
+//        TrackParcelable[] tracks = trackList.toArray(new TrackParcelable[trackList.size()]);
+//        args.putParcelableArray(Constants.ARGS_TRACKS, tracks);
+//        args.putInt(Constants.ARGS_TRACK_NUMBER, position);
+//
+//        DialogFragment dialogFragment = new DialogFragment();
+//        dialogFragment.setArguments(args);
+//
+//        if (savedInstanceState == null) {
+//            getSupportFragmentManager().beginTransaction()
+//                    .add(R.id.player_container, dialogFragment)
+//                    .commit();
+//        }
+
+        // previously
         android.support.v4.app.FragmentManager fm = getSupportFragmentManager();
         DialogFragment playerFragment = (DialogFragment) fm.findFragmentByTag(Constants.TAG_PLAYER);
 
@@ -49,7 +72,7 @@ public class PlayerActivity extends ActionBarActivity{
 
             FragmentTransaction transaction = fm.beginTransaction();
             transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
-            transaction.add(android.R.id.content, newFragment).commit();
+            transaction.add(android.R.id.content, newFragment, Constants.TAG_PLAYER).commit();
         }
     }
 

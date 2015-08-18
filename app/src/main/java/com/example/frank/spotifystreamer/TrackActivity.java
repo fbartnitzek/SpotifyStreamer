@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -11,6 +12,8 @@ import android.view.MenuItem;
 public class TrackActivity extends ActionBarActivity {
 
     public static final String INTENT_ARTIST_KEY = "INTENT_ARTIST_KEY";
+    private static final String LOG_TAG = TrackActivity.class.getName();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,9 +33,12 @@ public class TrackActivity extends ActionBarActivity {
                         + " (" + ((ArtistParcelable) artist).getName() + ")");
 
         if (savedInstanceState == null) {
+            Log.v(LOG_TAG, "onCreate - new fragment");
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.track_detail_container, fragment)
                     .commit();
+        } else {
+            Log.v(LOG_TAG, "onCreate - saved state");
         }
     }
 

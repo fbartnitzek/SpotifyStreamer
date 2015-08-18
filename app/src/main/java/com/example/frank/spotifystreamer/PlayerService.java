@@ -22,7 +22,7 @@ import java.io.IOException;
  */
 public class PlayerService extends Service implements MediaPlayer.OnPreparedListener,
         MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
-    private static final String LOG_TAG = PlayerService.class.getSimpleName();
+    private static final String LOG_TAG = PlayerService.class.getName();
 
     private WifiManager.WifiLock mWifiLock;
     private final Handler mHandler = new Handler();
@@ -196,7 +196,8 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
         mIsPlaying = false;
         mStateIsComplete = false;
 
-        if (mPlayer != null){
+        if (mPlayer != null) {
+            Log.v(LOG_TAG, "initPlayer - releasing player");
             mPlayer.release();
         }
         mPlayer = new MediaPlayer();
@@ -235,13 +236,14 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 //        initPlayer();
 //        resetPlayer();
 
+        Log.v(LOG_TAG, "startTrack " + number);
         initPlayer();
 
         mCurrentTrackIndex = number;
         mCurrentTrack = mTracks[number];
 
         Log.v(LOG_TAG, "startTrack " + mCurrentTrack.getName()
-                + " (Nr. " + mCurrentTrackIndex +")");
+                + " (Nr. " + mCurrentTrackIndex + ")");
         String trackUri = mCurrentTrack.getPreviewUrl();
 
         mIsPlaying = false;
@@ -257,14 +259,17 @@ public class PlayerService extends Service implements MediaPlayer.OnPreparedList
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        Log.v(LOG_TAG, "onPrepared");
 
         if (!mp.isPlaying()) {
+            Log.v(LOG_TAG, "onPrepared - now starts playing");
             mp.start();
             if (mSelectedMilliSeconds>0){
+                Log.v(LOG_TAG, "onPrepared - and seek to " + mSelectedMilliSeconds);
                 mp.seekTo(mSelectedMilliSeconds);
                 mSelectedMilliSeconds = 0;
             }
+        } else {
+            Log.v(LOG_TAG, "onPrepared - already playing...?");
         }
         mIsPlaying = true;
 //        mIsFullyLoaded = true;

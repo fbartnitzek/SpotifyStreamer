@@ -16,7 +16,7 @@ import com.squareup.picasso.Picasso;
 class ArtistAdapter extends ArrayAdapter<ArtistParcelable> {
 
 
-    private static final String LOG_TAG = ArtistAdapter.class.getSimpleName();
+    private static final String LOG_TAG = ArtistAdapter.class.getName();
     private final Activity activity;    //seems to be resource-friendlier this way (part of ViewHolder-pattern)
 
     public ArtistAdapter(Activity activity) {

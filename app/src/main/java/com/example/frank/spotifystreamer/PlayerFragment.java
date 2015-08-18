@@ -1,5 +1,6 @@
 package com.example.frank.spotifystreamer;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -33,7 +34,7 @@ import java.util.Arrays;
 public class PlayerFragment extends DialogFragment implements View.OnClickListener,
         ServiceConnection, SeekBar.OnSeekBarChangeListener {
 
-    private static final String LOG_TAG = PlayerFragment.class.getSimpleName();
+    private static final String LOG_TAG = PlayerFragment.class.getName();
     private static PlayerFragment mFragment = null;
     private TrackParcelable[] mTracks;
     private View mRootView;
@@ -57,7 +58,7 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
     private boolean mIsInit = false;
 
 
-    private boolean mStateIsPlaying = false;
+//    private boolean mStateIsPlaying = false;
 
     private int mPositionInTrack = 0;
     private int mDuration = Constants.TRACK_DEFAULT_LENGTH;   // workaround for unknown duration and division
@@ -185,6 +186,8 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         // maybe better?
 //        mContext = getActivity().getApplicationContext();
         mContext = getActivity();
+        setRetainInstance(true);
+        Log.v(LOG_TAG, "onCreate - now retain instance");
 
         if (savedInstanceState != null) {
             if (savedInstanceState.containsKey(Constants.STATE_TRACKS)) {
@@ -200,7 +203,8 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
                 mIsPaused = savedInstanceState.getBoolean(Constants.STATE_IS_PAUSED);
 
                 Log.v(LOG_TAG, "state restored with position: " + mPositionInTrack
-                        + ", isPlaying: " + mStateIsPlaying);
+                        + ", isBound: " + mIsBound + ", isInit: " + mIsInit
+                        + ", isPaused: " + mIsPaused);
             }
         } else {
             Bundle args = getArguments();
@@ -237,7 +241,7 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
     @Override
     public void onResume() {
-        Log.v(LOG_TAG, "on resume ");
+        Log.v(LOG_TAG, "onResume ");
         // to onStart
 //        mBroadcastManager.registerReceiver(mReceiver,
 //                new IntentFilter(Constants.ACTION_TRACK_STATE));
@@ -336,6 +340,15 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         return dialog;
     }
 
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+
+        Log.v(LOG_TAG, "onAttach - startService and bindService");
+        Intent intent = new Intent(activity, PlayerService.class);
+        activity.startService(intent);
+        activity.bindService(intent, this, Context.BIND_AUTO_CREATE);
+    }
 
     @Override
     public void onStart() {
@@ -344,9 +357,9 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         Log.v(LOG_TAG, "onStart");
 
 //        if (!mIsBound){
-        Intent intent = new Intent(mContext, PlayerService.class);
-        mContext.startService(intent);
-        mContext.bindService(intent, this, Context.BIND_AUTO_CREATE);
+//        Intent intent = new Intent(mContext, PlayerService.class);
+//        mContext.startService(intent);
+//        mContext.bindService(intent, this, Context.BIND_AUTO_CREATE);
 
 //        }
 
@@ -359,12 +372,21 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
     }
 
     @Override
+    public void onDetach() {
+        super.onDetach();
+        Log.v(LOG_TAG, "onDetach - unregister and unbindService");
+//        mContext.unbindService(this);
+        mIsBound = false;
+//        mBroadcastManager.unregisterReceiver(mReceiver);
+    }
+
+    @Override
     public void onStop() {
         super.onStop();
-        Log.v(LOG_TAG, "onStop");
-        mContext.unbindService(this);
-        mIsBound = false;
-        mBroadcastManager.unregisterReceiver(mReceiver);
+        Log.v(LOG_TAG, "onStop - unbind and unregister");
+//        mContext.unbindService(this);
+//        mIsBound = false;
+//        mBroadcastManager.unregisterReceiver(mReceiver);
     }
 
     @Override
@@ -411,13 +433,16 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        Log.v(LOG_TAG, "onSaveInstanceState isPlaying: " + mPlayerService.isPlaying());
+//        Log.v(LOG_TAG, "onSaveInstanceState isPlaying: " + mPlayerService.isPlaying());
+        Log.v(LOG_TAG, "onSaveInstanceState with position: " + mPositionInTrack
+                + ", isBound: " + mIsBound + ", isInit: " + mIsInit
+                + ", isPaused: " + mIsPaused);
         if (mTracks != null) {
             outState.putParcelableArray(Constants.STATE_TRACKS, mTracks);
             outState.putInt(Constants.STATE_SELECTED_TRACK, mPosition);
             outState.putInt(Constants.STATE_DURATION, mDuration);
             outState.putInt(Constants.STATE_CURRENT_TRACK_POSITION, mPositionInTrack);
-            outState.putBoolean(Constants.STATE_IS_PLAYING, mPlayerService.isPlaying());
+//            outState.putBoolean(Constants.STATE_IS_PLAYING, mPlayerService.isPlaying());
             outState.putBoolean(Constants.STATE_IS_BOUND, mIsBound);
             outState.putBoolean(Constants.STATE_IS_INIT, mIsInit);
             outState.putBoolean(Constants.STATE_IS_PAUSED, mIsPaused);
@@ -505,8 +530,12 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        Log.v(LOG_TAG, "onServiceConnected, isPlaying: "
-                + mStateIsPlaying + ", position: " + mPositionInTrack);
+        Log.v(LOG_TAG, "onServiceConnected with position: " + mPositionInTrack
+                + ", isBound: " + mIsBound + ", isInit: " + mIsInit
+                + ", isPaused: " + mIsPaused);
+
+//        Log.v(LOG_TAG, "onServiceConnected, isPlaying: "
+//                + mStateIsPlaying + ", position: " + mPositionInTrack);
         // use binder to get service
         mPlayerService = ((PlayerService.PlayerBinder) service).getService();
         mIsBound = true;
@@ -523,7 +552,10 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
 
         // lets try again?
-        if (!mIsInit){
+
+        // TODO: seems useless
+        if (!mIsInit) {
+            Log.v(LOG_TAG, "onServiceConnected - initializing player");
             mPlayerService.setmTracks(mTracks);
             mPlayerService.startTrack(mPosition);
             mIsInit = true;
@@ -533,6 +565,7 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
         // register receiver
         mBroadcastManager.registerReceiver(mReceiver,
                 new IntentFilter(Constants.ACTION_TRACK_STATE));
+        Log.v(LOG_TAG, "onServiceConnected - registered receivers");
     }
 
     @Override
@@ -552,9 +585,8 @@ public class PlayerFragment extends DialogFragment implements View.OnClickListen
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
-        //TODO: real integers ...
+
         Log.v(LOG_TAG, "onStopTrackingTouch " + seekBar.getProgress());
-//        mSeekBar.setProgress((int) (100 * mPositionInTrack / mDuration));
         mPlayerService.seekToPositon(seekBar.getProgress());
     }
 }

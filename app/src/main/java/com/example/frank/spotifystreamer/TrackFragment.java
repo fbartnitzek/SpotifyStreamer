@@ -35,7 +35,7 @@ import kaaes.spotify.webapi.android.models.Tracks;
  */
 public class TrackFragment extends Fragment {
 
-    private static final String LOG_TAG = TrackFragment.class.getSimpleName();
+    private static final String LOG_TAG = TrackFragment.class.getName();
 
     private TrackAdapter mTrackAdapter;
     private ArtistParcelable mArtist;
@@ -186,7 +186,7 @@ public class TrackFragment extends Fragment {
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
-
+        Log.v(LOG_TAG, "onSaveInstanceState");
         if (!mTracks.isEmpty()){
             // array just working with casts...
 //            ArrayList<TrackParcelable> parcelables = new ArrayList<>();
@@ -204,6 +204,7 @@ public class TrackFragment extends Fragment {
 
         @Override
         protected void onPostExecute(ArrayList<TrackParcelable> trackList) {
+            Log.v(LOG_TAG, "onPostExecute");
             mTrackAdapter.clear();
             // DONE: Notification for artists without toptracks, sample: Freaks in Love
             if (trackList == null){
@@ -221,7 +222,7 @@ public class TrackFragment extends Fragment {
 
         @Override
         protected ArrayList<TrackParcelable> doInBackground(String... params) {
-
+            Log.v(LOG_TAG, "doInBackground");
             if (params.length == 0){
                 return null;
             }
