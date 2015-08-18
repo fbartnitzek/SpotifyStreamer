@@ -8,12 +8,22 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.util.ArrayList;
 
-public class TrackActivity extends ActionBarActivity {
+
+public class TrackActivity extends ActionBarActivity implements TrackFragment.TrackCallback {
 
     public static final String INTENT_ARTIST_KEY = "INTENT_ARTIST_KEY";
     private static final String LOG_TAG = TrackActivity.class.getName();
 
+    @Override
+    public void onTrackSelected(ArrayList<TrackParcelable> trackParcelables, int position) {
+        Intent intent = new Intent(this, PlayerActivity.class);
+        intent.putParcelableArrayListExtra(Constants.EXTRA_TRACKS, trackParcelables);
+        intent.putExtra(Constants.EXTRA_TRACK_NUMBER, position);
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);   // TODO: ???
+        startActivity(intent);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,7 +40,7 @@ public class TrackActivity extends ActionBarActivity {
         fragment.setArguments(args);
 
         this.setTitle(getString(R.string.title_activity_track)
-                        + " (" + ((ArtistParcelable) artist).getName() + ")");
+                + " (" + ((ArtistParcelable) artist).getName() + ")");
 
         if (savedInstanceState == null) {
             Log.v(LOG_TAG, "onCreate - new fragment");
@@ -67,5 +77,6 @@ public class TrackActivity extends ActionBarActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
 
 }

@@ -39,9 +39,7 @@ public class TrackParcelable implements Parcelable {
         return name;
     }
 
-    public String getAlbum() {
-        return album;
-    }
+    public String getAlbum() { return album;}
 
     public String getArtist() {return artist;}
 
@@ -49,7 +47,7 @@ public class TrackParcelable implements Parcelable {
         return pictureUrl;
     }
 
-//    public String getPictureUrlLarge() {
+    //    public String getPictureUrlLarge() {
 //        return pictureUrlLarge;
 //    }
 
@@ -72,7 +70,8 @@ public class TrackParcelable implements Parcelable {
 //        parcel.writeString(pictureUrlLarge);
     }
 
-    public static final Parcelable.Creator<TrackParcelable> CREATOR = new Parcelable.Creator<TrackParcelable>(){
+    public static final Parcelable.Creator<TrackParcelable> CREATOR =
+            new Parcelable.Creator<TrackParcelable>(){
 
         @Override
         public TrackParcelable createFromParcel(Parcel source) {

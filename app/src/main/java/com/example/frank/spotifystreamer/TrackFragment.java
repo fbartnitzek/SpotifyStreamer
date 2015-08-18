@@ -9,7 +9,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -43,11 +42,10 @@ public class TrackFragment extends Fragment {
     private int mPosition;
     private ListView mListView;
 
-    //TODO: does not work
-//    08-11 00:28:53.748  22964-22964/? D/Finsky﹕ [1] PackageVerificationReceiver.onReceive: Verification requested, id = 74
-//    08-11 00:28:54.376  22964-22964/? D/Finsky﹕ [1] PackageVerificationReceiver.onReceive: Verification requested, id = 74
-//    08-11 00:29:00.849  22143-22143/? W/ContextImpl﹕ Calling a method in the system process without a qualified user: android.app.ContextImpl.startService:1686 android.content.ContextWrapper.startService:515 android.content.ContextWrapper.startService:515 com.android.keychain.KeyChainBroadcastReceiver.onReceive:12 android.app.ActivityThread.handleReceiver:2579
-//    08-11 00:29:05.663  21950-21950/? I/AmazonVideo.connectivity﹕ NetworkConnectionManager$ConnectivityChangeReceiver.onReceive: Received CONNECTIVITY_ACTION intent. Refreshing network info.
+    public interface TrackCallback {
+        void onTrackSelected(ArrayList<TrackParcelable> trackParcelables, int position);
+    }
+
 
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
 
@@ -102,9 +100,6 @@ public class TrackFragment extends Fragment {
             // fill list
             new FetchTrackTask().execute(mArtist.getId());
         }
-
-
-
     }
 
     @Override
@@ -144,60 +139,30 @@ public class TrackFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
-//                String previewUrl = null;
+                ArrayList<TrackParcelable> trackList = new ArrayList<>();
+                mPosition = position;
+                for (int i = 0; i < mTrackAdapter.getCount(); ++i) {
+                    trackList.add(mTrackAdapter.getItem(i));
+                }
+                ((TrackCallback) getActivity()).onTrackSelected(trackList, position);
 
-//                mPosition = position;
-                startPlayer(position);
             }
         });
 
         return rootView;
     }
 
-    private void startPlayer(int position) {
-        ArrayList<TrackParcelable> trackList = new ArrayList<>();
-        mPosition = position;
-        for (int i = 0; i < mTrackAdapter.getCount(); ++i) {
-            trackList.add(mTrackAdapter.getItem(i));
-        }
-
-        // TODO: use TwoPane from mainActivity ...
-        if (getResources().getBoolean(R.bool.large_layout)) {
-            // dialog over both views in same activity
-            Log.v(LOG_TAG, "in onItemClickListener - starting player dialog with track "
-                    + trackList.get(mPosition).getName());
-
-            FragmentManager fm = getActivity().getSupportFragmentManager();
-
-            PlayerFragment player = PlayerFragment.getInstance(trackList, mPosition);
-            player.show(fm, Constants.TAG_PLAYER);
-
-        } else {
-            // intent to new activity for small screens
-            Intent playerIntent = new Intent(getActivity(), PlayerActivity.class)
-                    .putParcelableArrayListExtra(Constants.EXTRA_TRACKS, trackList)
-                    .putExtra(Constants.EXTRA_CURRENT_TRACK, mPosition);
-            Log.v(LOG_TAG, "in onItemClickListener - starting player intent with track "
-                    + trackList.get(mPosition).getName());
-            startActivity(playerIntent);
-        }
-    }
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
         Log.v(LOG_TAG, "onSaveInstanceState");
         if (!mTracks.isEmpty()){
-            // array just working with casts...
-//            ArrayList<TrackParcelable> parcelables = new ArrayList<>();
-//            for (int i = 0; i<mTrackAdapter.getCount();++i){
-//                parcelables.add(mTrackAdapter.getItem(i));
-//            }
+
             savedInstanceState.putParcelableArrayList(Constants.STATE_TRACK_LISTVIEW, mTracks);
             savedInstanceState.putInt(Constants.STATE_SELECTED_TRACK, mPosition);
         }
 
-//        savedInstanceState.putCharSequence(TITLE_STATE, getActivity().getTitle());
     }
 
     private class FetchTrackTask extends AsyncTask<String, Void, ArrayList<TrackParcelable>> {
@@ -278,7 +243,7 @@ public class TrackFragment extends Fragment {
                         mArtist.getName()
                 ));
             }
-//            TrackParcelable[] result = list.toArray(new TrackParcelable[list.size()]);
+
             return list;
         }
 

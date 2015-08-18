@@ -3,13 +3,17 @@ package com.example.frank.spotifystreamer;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.util.ArrayList;
 
-public class MainActivity extends ActionBarActivity implements ArtistFragment.Callback{
+
+public class MainActivity extends ActionBarActivity
+        implements ArtistFragment.Callback, TrackFragment.TrackCallback{
 
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
     private final String LOG_TAG = MainActivity.class.getName();
@@ -91,5 +95,19 @@ public class MainActivity extends ActionBarActivity implements ArtistFragment.Ca
                     .putExtra(TrackActivity.INTENT_ARTIST_KEY, artistParcelable);
             startActivity(trackIntent);
         }
+    }
+
+    @Override
+    public void onTrackSelected(ArrayList<TrackParcelable> tracks, int position) {
+        // TODO: how to use callback for selected item
+        Bundle args = new Bundle();
+        args.putParcelableArrayList(Constants.ARGS_TRACKS, tracks);
+        args.putInt(Constants.ARGS_TRACK_NUMBER, position);
+
+        PlayerFragment newFragment = new PlayerFragment();
+        newFragment.setArguments(args);
+
+        FragmentManager fm = getSupportFragmentManager();
+        newFragment.show(fm, Constants.TAG_PLAYER_FRAGMENT);
     }
 }

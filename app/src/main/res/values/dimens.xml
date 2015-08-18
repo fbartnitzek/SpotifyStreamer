@@ -4,6 +4,7 @@
     <dimen name="activity_vertical_margin">16dp</dimen>
 
     <dimen name="artist_image_size">100dp</dimen>
+    <dimen name="track_image_size">200dp</dimen>
     <dimen name="artist_image_margin">2dp</dimen>
     <dimen name="artist_text_left_margin">10dp</dimen>
     <dimen name="track_text_left_margin">10dp</dimen>

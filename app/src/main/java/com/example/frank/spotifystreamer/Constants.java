@@ -52,4 +52,10 @@ public class Constants {
     public static final String STATE_IS_BOUND = "STATE_IS_BOUND";
     public static final java.lang.String STATE_IS_PAUSED = "STATE_IS_PAUSED";
 
+    public static final String TAG_PLAYER_FRAGMENT = "TAG_PLAYER_FRAGMENT";
+
+
+    public static final String STATE_URL = "STATE_URL";
+
+    public static final String TAG_WIFI_LOCK = "TAG_WIFI_LOCK";
 }
