@@ -100,14 +100,12 @@ public class MainActivity extends ActionBarActivity
 
     @Override
     public void onTrackSelected(ArrayList<TrackParcelable> tracks, int position) {
-        // TODO: how to use callback for selected item
         Log.v(LOG_TAG, "onTrackSelected with position: " + position);
         Bundle args = new Bundle();
         args.putParcelableArrayList(Constants.ARGS_TRACKS, tracks);
         args.putInt(Constants.ARGS_TRACK_NUMBER, position);
 
         PlayerFragment newFragment = new PlayerFragment();
-//        newFragment.setTargetFragment(fragment, Constants.FRAGMENT_REQUEST_CODE);
         newFragment.setArguments(args);
 
         FragmentManager fm = getSupportFragmentManager();

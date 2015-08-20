@@ -48,37 +48,16 @@ public class TrackFragment extends Fragment {
     }
 
 
-//    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
-//
-//        @Override
-//        public void onReceive(Context context, Intent intent) {
-//            if (Constants.ACTION_TRACK_CHANGED.equals(intent.getAction())) {
-//
-//                int number = intent.getIntExtra(Constants.EXTRA_TRACK_NUMBER, 0);
-//                Log.v(LOG_TAG, "onReceive, track changed: " + number
-//                        + " (previously: " + mPosition + ")");
-//                mPosition = number;
-//                mListView.setSelection(mPosition);
-//                mListView.smoothScrollToPosition(mPosition);
-//            }
-//        }
-//    };
-//    private LocalBroadcastManager mBroadcastManager;
-    private Context mContext;
-
     public TrackFragment() {}
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.v(LOG_TAG, "onCreate");
-        mContext = getActivity().getApplicationContext();
 
         mTracks = new ArrayList<>();
         mTrackAdapter = new TrackAdapter(getActivity());
         Bundle args = getArguments();
-
-//        mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
 
         if (args != null && args.containsKey(Constants.ARGS_ARTIST_PARCELABLE)){  // get artist from bundle
             mArtist = args.getParcelable(Constants.ARGS_ARTIST_PARCELABLE);
@@ -188,20 +167,6 @@ public class TrackFragment extends Fragment {
 
         return rootView;
     }
-
-//    @Override
-//    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//        // TODO:
-////        if(requestCode == FRAGMENT_CODE && resultCode == Activity.RESULT_OK) {
-////            if(data != null) {
-////                String value = intent.getStringExtra(FRAGMENT_KEY);
-////                if(value != null) {
-////                    Log.v(TAG, "Data passed from Child fragment = " + value);
-////                }
-////            }
-////        }
-//    }
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
