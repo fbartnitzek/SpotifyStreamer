@@ -1,6 +1,7 @@
 package com.example.frank.spotifystreamer;
 
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentManager;
@@ -11,7 +12,8 @@ import android.util.Log;
 /**
  * Created by frank on 05.08.15.
  */
-public class PlayerActivity extends ActionBarActivity{
+public class PlayerActivity extends ActionBarActivity implements
+        PlayerFragment.PlayerTrackListener {
     // TODO: extends AppCompatActivity???
 
     private static final String LOG_TAG = PlayerActivity.class.getName();
@@ -50,4 +52,20 @@ public class PlayerActivity extends ActionBarActivity{
 
     }
 
+    @Override
+    public void onPlayerTrackChange(int position) {
+
+        Log.v(LOG_TAG, "onPlayerTrackChange, position: " + position);
+        Activity parent = getParent();
+        //TODO: how to modify fragment from parent activity...?
+//        TrackFragment tf = (TrackFragment) getSupportFragmentManager()
+//                .findFragmentById(R.id.track_detail_container);
+//
+//        if (tf != null) {
+//            Log.v(LOG_TAG, "onPlayerTrackChange - fragment found, position: " + position);
+//            tf.updateSelectedTrack(position);
+//        } else {
+//            Log.v(LOG_TAG, "onPlayerTrackChange - fragment unknown, position: " + position);
+//        }
+    }
 }

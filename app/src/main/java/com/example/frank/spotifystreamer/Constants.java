@@ -58,4 +58,9 @@ public class Constants {
     public static final String STATE_URL = "STATE_URL";
 
     public static final String TAG_WIFI_LOCK = "TAG_WIFI_LOCK";
+    public static final String SHARE_APP = " #SpotifyStreamer";
+
+    public static final int FRAGMENT_REQUEST_CODE = 1234;
+    public static final String EXTRA_ARTIST = "EXTRA_ARTIST";
+
 }

@@ -27,11 +27,17 @@ import java.util.ArrayList;
 /**
  * Created by frank on 05.08.15.
  */
+
+// TODO anywhere
+//Intent intent = new Intent();
+//        intent.putExtra(FRAGMENT_KEY, "Ok");
+//        getTargetFragment().onActivityResult(getTargetRequestCode(), Activity.RESULT_OK, intent);
+//        getFragmentManager().popBackStack();
+
 public class PlayerFragment extends DialogFragment
         implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
 
     private static final String LOG_TAG = PlayerFragment.class.getName();
-
     private boolean mIsBound = false;
     // true = bound and connected to service
     // false = unbound and disconnected to service
@@ -59,6 +65,11 @@ public class PlayerFragment extends DialogFragment
     private SeekBar mSeekBar;
 
     private int mDuration = Constants.TRACK_DEFAULT_LENGTH;   // workaround for unknown duration and division
+    private PlayerTrackListener mTrackChangeCallback;
+
+    public interface PlayerTrackListener {
+        void onPlayerTrackChange(int position);
+    }
 
     // Broadcast-receiver and rotation did not work so well...
     private Runnable mProgressRunnable = new Runnable() {
@@ -237,6 +248,11 @@ public class PlayerFragment extends DialogFragment
     public void onAttach(Activity activity) {
         super.onAttach(activity);
 
+        try {
+            mTrackChangeCallback = (PlayerTrackListener) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString() + " must implement PlayerTrackListener");
+        }
         Log.v(LOG_TAG, "onAttach");
     }
 
@@ -328,6 +344,7 @@ public class PlayerFragment extends DialogFragment
                 mIsPaused = true;
                 restartPlayer();
                 updateViewsWithCurrentTrack();
+                mTrackChangeCallback.onPlayerTrackChange(mPosition);
 //                Log.v(LOG_TAG, "previous clicked - playing previous track "
 //                        + mTracks.get(mPosition).getName());
 
@@ -366,6 +383,7 @@ public class PlayerFragment extends DialogFragment
 //                        + mTracks.get(mPosition).getName());
                 restartPlayer();
                 updateViewsWithCurrentTrack();
+                mTrackChangeCallback.onPlayerTrackChange(mPosition);
 
                 break;
         }

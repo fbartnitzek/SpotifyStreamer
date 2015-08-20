@@ -13,7 +13,8 @@ import java.util.ArrayList;
 
 
 public class MainActivity extends ActionBarActivity
-        implements ArtistFragment.Callback, TrackFragment.TrackCallback{
+        implements ArtistFragment.Callback, TrackFragment.TrackCallback,
+        PlayerFragment.PlayerTrackListener{
 
     private static final String DETAILFRAGMENT_TAG = "DFTAG";
     private final String LOG_TAG = MainActivity.class.getName();
@@ -91,23 +92,38 @@ public class MainActivity extends ActionBarActivity
         } else {
             Log.v(LOG_TAG, "onItemSelected - mobile");
             // use parcelableArtist directly
-            Intent trackIntent = new Intent(this, TrackActivity.class)
-                    .putExtra(TrackActivity.INTENT_ARTIST_KEY, artistParcelable);
-            startActivity(trackIntent);
+            Intent intent = new Intent(this, TrackActivity.class)
+                    .putExtra(Constants.EXTRA_ARTIST, artistParcelable);
+            startActivity(intent);
         }
     }
 
     @Override
     public void onTrackSelected(ArrayList<TrackParcelable> tracks, int position) {
         // TODO: how to use callback for selected item
+        Log.v(LOG_TAG, "onTrackSelected with position: " + position);
         Bundle args = new Bundle();
         args.putParcelableArrayList(Constants.ARGS_TRACKS, tracks);
         args.putInt(Constants.ARGS_TRACK_NUMBER, position);
 
         PlayerFragment newFragment = new PlayerFragment();
+//        newFragment.setTargetFragment(fragment, Constants.FRAGMENT_REQUEST_CODE);
         newFragment.setArguments(args);
 
         FragmentManager fm = getSupportFragmentManager();
         newFragment.show(fm, Constants.TAG_PLAYER_FRAGMENT);
+    }
+
+    @Override
+    public void onPlayerTrackChange(int position) {
+        TrackFragment tf = (TrackFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.track_detail_container);
+
+        if (tf != null) {
+            Log.v(LOG_TAG, "onPlayerTrackChange - fragment found, position: " + position);
+            tf.updateSelectedTrack(position);
+        } else {
+            Log.v(LOG_TAG, "onPlayerTrackChange - fragment unknown, position: " + position);
+        }
     }
 }

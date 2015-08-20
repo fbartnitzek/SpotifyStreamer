@@ -2,7 +2,6 @@ package com.example.frank.spotifystreamer;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -11,7 +10,8 @@ import android.view.MenuItem;
 import java.util.ArrayList;
 
 
-public class TrackActivity extends ActionBarActivity implements TrackFragment.TrackCallback {
+public class TrackActivity extends ActionBarActivity implements TrackFragment.TrackCallback,
+        PlayerFragment.PlayerTrackListener{
 
     public static final String INTENT_ARTIST_KEY = "INTENT_ARTIST_KEY";
     private static final String LOG_TAG = TrackActivity.class.getName();
@@ -31,16 +31,23 @@ public class TrackActivity extends ActionBarActivity implements TrackFragment.Tr
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_track);
 
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
         // not needed here, but in main-activity...?
         Bundle args = new Bundle();
 
-        Parcelable artist = getIntent().getParcelableExtra(INTENT_ARTIST_KEY);
+        if (!getIntent().hasExtra(Constants.EXTRA_ARTIST)) {
+            Log.v(LOG_TAG, "onCreate without artist");
+            return;
+        }
+        ArtistParcelable artist = getIntent().getParcelableExtra(Constants.EXTRA_ARTIST);
         args.putParcelable(Constants.ARGS_ARTIST_PARCELABLE, artist);
         TrackFragment fragment = new TrackFragment();
         fragment.setArguments(args);
 
+
         this.setTitle(getString(R.string.title_activity_track)
-                + " (" + ((ArtistParcelable) artist).getName() + ")");
+                + " (" + artist.getName() + ")");
 
         if (savedInstanceState == null) {
             Log.v(LOG_TAG, "onCreate - new fragment");
@@ -79,4 +86,16 @@ public class TrackActivity extends ActionBarActivity implements TrackFragment.Tr
     }
 
 
+    @Override
+    public void onPlayerTrackChange(int position) {
+        TrackFragment tf = (TrackFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.track_detail_container);
+
+        if (tf != null) {
+            Log.v(LOG_TAG, "onPlayerTrackChange - fragment found, position: " + position);
+            tf.updateSelectedTrack(position);
+        } else {
+            Log.v(LOG_TAG, "onPlayerTrackChange - fragment unknown, position: " + position);
+        }
+    }
 }

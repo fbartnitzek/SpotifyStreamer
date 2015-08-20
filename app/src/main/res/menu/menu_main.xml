@@ -2,6 +2,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".MainActivity">
+    <!--<item android:id="@+id/action_share"-->
+        <!--app:showAsAction="ifRoom"-->
+        <!--app:actionProviderClass="android.support.v7.widget.ShareActionProvider"-->
+        <!--android:title="@string/share" />-->
+    <!--item android:id="@+id/action_now_playing"
+        android:title="@string/now_playing"
+        android:orderInCategory="50"
+        app:showAsAction="ifRoom"/-->
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"

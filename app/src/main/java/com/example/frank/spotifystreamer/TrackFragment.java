@@ -1,15 +1,13 @@
 package com.example.frank.spotifystreamer;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,49 +40,50 @@ public class TrackFragment extends Fragment {
     private int mPosition;
     private ListView mListView;
 
+//    private ShareActionProvider mShareActionProvider;
+// seems to be working only with contentProviders...
+
     public interface TrackCallback {
         void onTrackSelected(ArrayList<TrackParcelable> trackParcelables, int position);
     }
 
 
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (Constants.ACTION_TRACK_CHANGED.equals(intent.getAction())) {
-
-                int number = intent.getIntExtra(Constants.EXTRA_TRACK_NUMBER, 0);
-                Log.v(LOG_TAG, "onReceive, track changed: " + number
-                        + " (previously: " + mPosition + ")");
-                mPosition = number;
-                mListView.setSelection(mPosition);
-                mListView.smoothScrollToPosition(mPosition);
-            }
-        }
-    };
-    private LocalBroadcastManager mBroadcastManager;
+//    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+//
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            if (Constants.ACTION_TRACK_CHANGED.equals(intent.getAction())) {
+//
+//                int number = intent.getIntExtra(Constants.EXTRA_TRACK_NUMBER, 0);
+//                Log.v(LOG_TAG, "onReceive, track changed: " + number
+//                        + " (previously: " + mPosition + ")");
+//                mPosition = number;
+//                mListView.setSelection(mPosition);
+//                mListView.smoothScrollToPosition(mPosition);
+//            }
+//        }
+//    };
+//    private LocalBroadcastManager mBroadcastManager;
     private Context mContext;
 
     public TrackFragment() {}
 
-
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        Log.v(LOG_TAG, "onCreate");
         mContext = getActivity().getApplicationContext();
 
         mTracks = new ArrayList<>();
         mTrackAdapter = new TrackAdapter(getActivity());
         Bundle args = getArguments();
 
-        mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
+//        mBroadcastManager = LocalBroadcastManager.getInstance(mContext);
 
         if (args != null && args.containsKey(Constants.ARGS_ARTIST_PARCELABLE)){  // get artist from bundle
             mArtist = args.getParcelable(Constants.ARGS_ARTIST_PARCELABLE);
         } else {
-            Log.e(LOG_TAG, "no artist-argument set - should never happen");
+            Log.v(LOG_TAG, "no artist-argument set - should never happen");
             return;
         }
 
@@ -102,18 +101,55 @@ public class TrackFragment extends Fragment {
         }
     }
 
+//    @Override
+//    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+////        super.onCreateOptionsMenu(menu, inflater);
+//        inflater.inflate(R.menu.menu_track, menu);
+
+//        MenuItem menuItem = menu.findItem(R.id.action_share);
+//        mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(menuItem);
+//
+//        if ( mPosition != ListView.INVALID_POSITION) {
+//            mShareActionProvider.setShareIntent(createShareTrackIntent());
+//        }
+//    }
+
+//    private Intent createShareTrackIntent() {
+//        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+//        shareIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+//        shareIntent.setType("text/plain");
+//        shareIntent.putExtra(Intent.EXTRA_TEXT, "listening to " + mTracks.get(mPosition).getName()
+//                + " from " + mArtist.getName() + " (listen now: " + mTracks.get(mPosition).getPreviewUrl()
+//                + ")" + Constants.SHARE_APP);
+//        return shareIntent;
+//    }
+
     @Override
     public void onResume() {
-        mBroadcastManager.registerReceiver(mReceiver,
-                new IntentFilter(Constants.ACTION_TRACK_CHANGED));
+//        mBroadcastManager.registerReceiver(mReceiver,
+//                new IntentFilter(Constants.ACTION_TRACK_CHANGED));
         super.onResume();
     }
 
     @Override
+    public void onStart() {
+//        mListView.setSelection(mPosition);
+//        mListView.smoothScrollToPosition(mPosition);
+        super.onStart();
+    }
+
+    @Override
     public void onPause() {
-        Log.v(LOG_TAG, "on pause - unregisters receiver");
-        mBroadcastManager.unregisterReceiver(mReceiver);
+//        Log.v(LOG_TAG, "on pause - unregisters receiver");
+//        mBroadcastManager.unregisterReceiver(mReceiver);
         super.onPause();
+    }
+
+    public void updateSelectedTrack(int position) {
+        Log.v(LOG_TAG, "updateSelectedTrack to position " + position);
+        mPosition = position;
+        mListView.setItemChecked(mPosition, true);
+        mListView.smoothScrollToPosition(mPosition);
     }
 
     @Override
@@ -132,6 +168,7 @@ public class TrackFragment extends Fragment {
 
         if (!mTrackAdapter.isEmpty() && mPosition != ListView.INVALID_POSITION){
             mListView.smoothScrollToPosition(mPosition);
+//            updateSelectedTrack(mPosition);
         }
 
         // try open uri in browser to play the track
@@ -152,6 +189,19 @@ public class TrackFragment extends Fragment {
         return rootView;
     }
 
+//    @Override
+//    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+//        // TODO:
+////        if(requestCode == FRAGMENT_CODE && resultCode == Activity.RESULT_OK) {
+////            if(data != null) {
+////                String value = intent.getStringExtra(FRAGMENT_KEY);
+////                if(value != null) {
+////                    Log.v(TAG, "Data passed from Child fragment = " + value);
+////                }
+////            }
+////        }
+//    }
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -163,6 +213,18 @@ public class TrackFragment extends Fragment {
             savedInstanceState.putInt(Constants.STATE_SELECTED_TRACK, mPosition);
         }
 
+    }
+
+    private void setupActionBar(){
+        ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            // shows title - not enough space for both...
+//            actionBar.setTitle("now playing");
+            if (mArtist != null) {
+                actionBar.setTitle(mArtist.getName());
+            }
+        }
     }
 
     private class FetchTrackTask extends AsyncTask<String, Void, ArrayList<TrackParcelable>> {
