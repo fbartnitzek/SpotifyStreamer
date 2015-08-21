@@ -157,8 +157,6 @@ public class PlayerFragment extends DialogFragment
     @Override
     public void onResume() {
         Log.v(LOG_TAG, "onResume ");
-//        mBroadcastManager.registerReceiver(mReceiver,
-//                new IntentFilter(Constants.ACTION_TRACK_STATE));
         super.onResume();
     }
 
@@ -166,7 +164,6 @@ public class PlayerFragment extends DialogFragment
     public void onPause() {
         // to onStop
         Log.v(LOG_TAG, "on pause ");
-//        mBroadcastManager.unregisterReceiver(mReceiver);
         super.onPause();
     }
 

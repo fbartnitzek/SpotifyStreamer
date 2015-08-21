@@ -22,13 +22,10 @@ public class TrackActivity extends AppCompatActivity implements TrackFragment.Tr
 
     @Override
     public void onTrackSelected(ArrayList<TrackParcelable> trackParcelables, int position) {
-//        Intent intent = new Intent(this, PlayerActivity.class);
+
         mTrackParcelables = trackParcelables;
         mTrackNumber = position;
-//        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);   // singleton-like
-//        intent.putParcelableArrayListExtra(Constants.EXTRA_TRACKS, trackParcelables);
-//        intent.putExtra(Constants.EXTRA_TRACK_NUMBER, position);
-//        startActivity(intent);
+
         startPlayer(true);
     }
 
@@ -44,13 +41,7 @@ public class TrackActivity extends AppCompatActivity implements TrackFragment.Tr
             Toast.makeText(this, R.string.now_playing_unavailable, Toast.LENGTH_LONG).show();
             return;
         }
-//        if (!mPlayerStarted && !restartPlaying){
-//            Toast.makeText(this, R.string.now_playing_unavailable, Toast.LENGTH_LONG).show();
-//            return;
-//        } else {
-//            intent.putParcelableArrayListExtra(Constants.EXTRA_TRACKS, mTrackParcelables);
-//            intent.putExtra(Constants.EXTRA_TRACK_NUMBER, mTrackNumber);
-//        }
+
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);   // singleton-like
         intent.putExtra(Constants.EXTRA_RESTART_PLAYING, restartPlaying);
 

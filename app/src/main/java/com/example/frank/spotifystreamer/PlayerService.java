@@ -22,37 +22,10 @@ public class PlayerService extends Service implements
         MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
 
     private static final String LOG_TAG = PlayerService.class.getName();
-    private boolean mIsPlaying;
-    private boolean mStateIsCompleted;
-    private int mStateProgress;
-    private String mUrl;
-    private int mPosition;
-    private ArrayList<TrackParcelable> mTracks;
-    private Handler mProgressHandler;
-    private MediaPlayer mPlayer;
-    private final IBinder mPlayerBinder = new PlayerBinder();
 
-
-    private final Runnable mProgressRunnable = new Runnable() {
-        @Override
-        public void run() {
-            mStateProgress = mPlayer.getCurrentPosition();
-            mProgressHandler.postDelayed(this, Constants.UPDATE_INTERVAL);
-        }
-    };
-    private int mStateDuration = Constants.TRACK_DEFAULT_LENGTH;
-
-    private void watchProgress() {
-        mProgressHandler = new Handler();
-        mProgressHandler.post(mProgressRunnable );
-    }
-
-    public int getmStateDuration() {
-        return mStateDuration;
-    }
-
-
-    private WifiManager.WifiLock mWifiLock;
+    // state-handling based on
+    // https://github.com/bungbagong/Spotify_Streamer/blob/2.11_debugging/app/src/main/java/com/bungbagong/spotify_streamer/MediaPlayerService.java
+    // after trying some other ways around...
 
     /*  states
         created => idle
@@ -63,6 +36,32 @@ public class PlayerService extends Service implements
         seekTo ...
         stop  => stopped
      */
+
+    private boolean mIsPlaying;
+    private boolean mStateIsCompleted;
+    private int mStateProgress;
+    private String mUrl;
+    private int mPosition;
+    private ArrayList<TrackParcelable> mTracks;
+    private Handler mProgressHandler;
+    private MediaPlayer mPlayer;
+    private final IBinder mPlayerBinder = new PlayerBinder();
+    private int mStateDuration = Constants.TRACK_DEFAULT_LENGTH;
+
+    private final Runnable mProgressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mStateProgress = mPlayer.getCurrentPosition();
+            mProgressHandler.postDelayed(this, Constants.UPDATE_INTERVAL);
+        }
+    };
+
+    private void watchProgress() {
+        mProgressHandler = new Handler();
+        mProgressHandler.post(mProgressRunnable );
+    }
+
+    private WifiManager.WifiLock mWifiLock;
 
     public class PlayerBinder extends Binder {
         PlayerService getService() {
@@ -119,6 +118,10 @@ public class PlayerService extends Service implements
         Log.v(LOG_TAG, "seeks to position " + milliSeconds + "ms)");
         mPlayer.seekTo(milliSeconds);
 
+    }
+
+    public int getmStateDuration() {
+        return mStateDuration;
     }
 
     public void reconnectPlayer(){
@@ -184,7 +187,6 @@ public class PlayerService extends Service implements
         Log.v(LOG_TAG, "onPrepared - player is started & playing, progress tracked, duration: "
                 + mPlayer.getDuration());
     }
-
 
     @Override
     public void onCompletion(MediaPlayer mp) {

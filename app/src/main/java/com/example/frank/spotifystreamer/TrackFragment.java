@@ -134,7 +134,6 @@ public class TrackFragment extends Fragment {
 //            updateSelectedTrack(mPosition);
         }
 
-        // try open uri in browser to play the track
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -164,25 +163,12 @@ public class TrackFragment extends Fragment {
 
     }
 
-//    private void setupActionBar(){
-//        ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
-//        if (actionBar != null) {
-//            actionBar.setDisplayHomeAsUpEnabled(true);
-//            // shows title - not enough space for both...
-////            actionBar.setTitle("now playing");
-//            if (mArtist != null) {
-//                actionBar.setTitle(mArtist.getName());
-//            }
-//        }
-//    }
-
     private class FetchTrackTask extends AsyncTask<String, Void, ArrayList<TrackParcelable>> {
 
         @Override
         protected void onPostExecute(ArrayList<TrackParcelable> trackList) {
             Log.v(LOG_TAG, "onPostExecute");
             mTrackAdapter.clear();
-            // DONE: Notification for artists without toptracks, sample: Freaks in Love
             if (trackList == null){
                 toastError(null);
             } else {

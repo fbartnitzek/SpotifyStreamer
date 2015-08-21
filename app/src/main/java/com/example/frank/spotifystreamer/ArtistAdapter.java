@@ -34,12 +34,6 @@ class ArtistAdapter extends ArrayAdapter<ArtistParcelable> {
 
         View rowView = convertView;
         if (rowView == null){
-            // previously
-//            LayoutInflater inflater = LayoutInflater.from(getContext());
-//            convertView = inflater.inflate(R.layout.list_item_artist, parent, false);
-            // webcast-sample
-//            convertView = LayoutInflater.from(getContext()).
-//                    inflate(R.layout.list_item_artist, parent, false);
             // http://www.vogella.com/tutorials/AndroidListView/article.html
             LayoutInflater inflater = activity.getLayoutInflater();
             rowView = inflater.inflate(R.layout.list_item_artist, parent, false);

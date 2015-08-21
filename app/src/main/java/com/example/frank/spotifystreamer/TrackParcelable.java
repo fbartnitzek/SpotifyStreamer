@@ -13,7 +13,6 @@ public class TrackParcelable implements Parcelable {
     private final String pictureUrl;
     private final String previewUrl;
     private final String artist;
-//    private final String pictureUrlLarge;
 
     private TrackParcelable(Parcel parcel) {
         this.name = parcel.readString();
@@ -21,7 +20,6 @@ public class TrackParcelable implements Parcelable {
         this.pictureUrl = parcel.readString();
         this.previewUrl = parcel.readString();
         this.artist = parcel.readString();
-//        this.pictureUrlLarge = parcel.readString();
     }
 
     public TrackParcelable(String name, String album, String pictureUrl, String previewUrl,
@@ -31,7 +29,6 @@ public class TrackParcelable implements Parcelable {
         this.pictureUrl = pictureUrl;
         this.previewUrl = previewUrl;
         this.artist = artist;
-//        this.pictureUrlLarge = pictureUrlLarge;
     }
 
 
@@ -46,10 +43,6 @@ public class TrackParcelable implements Parcelable {
     public String getPictureUrl() {
         return pictureUrl;
     }
-
-    //    public String getPictureUrlLarge() {
-//        return pictureUrlLarge;
-//    }
 
     public String getPreviewUrl() {
         return previewUrl;
@@ -67,7 +60,6 @@ public class TrackParcelable implements Parcelable {
         parcel.writeString(pictureUrl);
         parcel.writeString(previewUrl);
         parcel.writeString(artist);
-//        parcel.writeString(pictureUrlLarge);
     }
 
     public static final Parcelable.Creator<TrackParcelable> CREATOR =

@@ -31,7 +31,6 @@ public class MainActivity extends AppCompatActivity
 
         if (savedInstanceState != null) {
             mPlayerStarted = savedInstanceState.getBoolean(Constants.STATE_PLAYER_STARTED);
-//            mArtists = savedInstanceState.getParcelableArray(Constants.STATE_ARTISTS);
             Log.v(LOG_TAG, "onCreate, restored tracks and mPlayerStarted " + mPlayerStarted);
         }
 
@@ -86,8 +85,6 @@ public class MainActivity extends AppCompatActivity
         String country = Util.getCountry(this);
         if (!country.equals(mCountry)) {
             Log.v(LOG_TAG, "country changed");
-//            ArtistFragment af = (ArtistFragment) getSupportFragmentManager()
-//              .findFragmentById(R.id.fragment_artist);
             TrackFragment tf = (TrackFragment) getSupportFragmentManager()
                     .findFragmentByTag(Constants.TAG_DETAIL_FRAGMENT);
             if (tf != null) {
@@ -98,7 +95,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onItemSelected(ArtistParcelable artistParcelable) {
-//        mArtists = artists;
+
         if (mTwoPane) {
             Log.v(LOG_TAG, "onItemSelected - tablet");
             Bundle args = new Bundle();
@@ -123,25 +120,15 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onTrackSelected(ArrayList<TrackParcelable> tracks, int position) {
         Log.v(LOG_TAG, "onTrackSelected with position: " + position);
-//        Bundle args = new Bundle();
-//        mTracks = tracks;
-//        mPosition = position;
         startPlayer(true, tracks, position);
-//        args.putParcelableArrayList(Constants.ARGS_TRACKS, tracks);
-//        args.putInt(Constants.ARGS_TRACK_NUMBER, position);
-//
-//        PlayerFragment newFragment = new PlayerFragment();
-//        newFragment.setArguments(args);
-//
-//        FragmentManager fm = getSupportFragmentManager();
-//        newFragment.show(fm, Constants.TAG_PLAYER_FRAGMENT);
+
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putBoolean(Constants.STATE_PLAYER_STARTED, mPlayerStarted);
-//        outState.putParcelableArrayList(Constants.STATE_ARTISTS, mArtists);
+
         // TODO: why is mplayerStarted false, when service is running???
         Log.v(LOG_TAG, "onSaveInstanceState, stored tracks and playerStarted " + mPlayerStarted);
     }
