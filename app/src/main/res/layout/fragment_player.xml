@@ -11,18 +11,18 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="any artist"/>
+        android:text="@string/any_artist"/>
 
     <TextView
         android:id="@+id/album_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="any album"/>
+        android:text="@string/any_album"/>
 
     <ImageView
         android:id="@+id/album_image"
-        android:layout_width="wrap_content"
+        android:layout_width="@dimen/track_image_size"
         android:layout_height="@dimen/track_image_size"
         android:gravity="center"
         android:src="@drawable/abc_btn_rating_star_on_mtrl_alpha"/>
@@ -32,7 +32,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="any track"/>
+        android:text="@string/any_track"/>
     <!-- contains
         header: Artist
                 Album
@@ -56,7 +56,7 @@
             android:gravity="center_vertical"
             android:layout_marginLeft="5dp"
             android:maxLines="1"
-            android:text="00:00"
+            android:text="@string/start_time"
             android:layout_weight="1"/>
 
         <SeekBar
@@ -76,7 +76,7 @@
             android:layout_marginRight="5dp"
             android:layout_alignWithParentIfMissing="true"
             android:maxLines="1"
-            android:text="00:30"
+            android:text="@string/duration_time"
             android:layout_weight="1"/>
 
     </LinearLayout>

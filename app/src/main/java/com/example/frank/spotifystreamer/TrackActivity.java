@@ -2,27 +2,60 @@ package com.example.frank.spotifystreamer;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v4.app.NavUtils;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
 
-public class TrackActivity extends ActionBarActivity implements TrackFragment.TrackCallback,
+public class TrackActivity extends AppCompatActivity implements TrackFragment.TrackCallback,
         PlayerFragment.PlayerTrackListener{
 
-    public static final String INTENT_ARTIST_KEY = "INTENT_ARTIST_KEY";
     private static final String LOG_TAG = TrackActivity.class.getName();
+    private ArrayList<TrackParcelable> mTrackParcelables;
+    private int mTrackNumber;
+    private boolean mPlayerStarted = false;
 
     @Override
     public void onTrackSelected(ArrayList<TrackParcelable> trackParcelables, int position) {
+//        Intent intent = new Intent(this, PlayerActivity.class);
+        mTrackParcelables = trackParcelables;
+        mTrackNumber = position;
+//        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);   // singleton-like
+//        intent.putParcelableArrayListExtra(Constants.EXTRA_TRACKS, trackParcelables);
+//        intent.putExtra(Constants.EXTRA_TRACK_NUMBER, position);
+//        startActivity(intent);
+        startPlayer(true);
+    }
+
+    private void startPlayer(boolean restartPlaying) {
+        Log.v(LOG_TAG, "start player");
         Intent intent = new Intent(this, PlayerActivity.class);
-        intent.putParcelableArrayListExtra(Constants.EXTRA_TRACKS, trackParcelables);
-        intent.putExtra(Constants.EXTRA_TRACK_NUMBER, position);
-        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);   // TODO: ???
+
+        if (restartPlaying){
+            intent.putParcelableArrayListExtra(Constants.EXTRA_TRACKS, mTrackParcelables);
+            intent.putExtra(Constants.EXTRA_TRACK_NUMBER, mTrackNumber);
+            mPlayerStarted = true;
+        } else if (!mPlayerStarted){
+            Toast.makeText(this, R.string.now_playing_unavailable, Toast.LENGTH_LONG).show();
+            return;
+        }
+//        if (!mPlayerStarted && !restartPlaying){
+//            Toast.makeText(this, R.string.now_playing_unavailable, Toast.LENGTH_LONG).show();
+//            return;
+//        } else {
+//            intent.putParcelableArrayListExtra(Constants.EXTRA_TRACKS, mTrackParcelables);
+//            intent.putExtra(Constants.EXTRA_TRACK_NUMBER, mTrackNumber);
+//        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);   // singleton-like
+        intent.putExtra(Constants.EXTRA_RESTART_PLAYING, restartPlaying);
+
         startActivity(intent);
+        mPlayerStarted = true;
     }
 
     @Override
@@ -31,7 +64,10 @@ public class TrackActivity extends ActionBarActivity implements TrackFragment.Tr
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_track);
 
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if (getSupportActionBar() != null){
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+
 
         // not needed here, but in main-activity...?
         Bundle args = new Bundle();
@@ -50,12 +86,14 @@ public class TrackActivity extends ActionBarActivity implements TrackFragment.Tr
                 + " (" + artist.getName() + ")");
 
         if (savedInstanceState == null) {
+
             Log.v(LOG_TAG, "onCreate - new fragment");
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.track_detail_container, fragment)
                     .commit();
         } else {
-            Log.v(LOG_TAG, "onCreate - saved state");
+            Log.v(LOG_TAG, "onCreate - restored state, player started " + mPlayerStarted);
+            mPlayerStarted = savedInstanceState.getBoolean(Constants.STATE_PLAYER_STARTED);
         }
     }
 
@@ -64,7 +102,13 @@ public class TrackActivity extends ActionBarActivity implements TrackFragment.Tr
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_track, menu);
-        return true;
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(Constants.STATE_PLAYER_STARTED, mPlayerStarted);
     }
 
     @Override
@@ -72,19 +116,22 @@ public class TrackActivity extends ActionBarActivity implements TrackFragment.Tr
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
-            // TODO: refresh top10 tracks after country-change
-
-            return true;
+        switch (item.getItemId()) {
+            case R.id.action_now_playing:
+                startPlayer(false);
+                return true;
+            case android.R.id.home:
+                NavUtils.navigateUpFromSameTask(this);
+                return true;
         }
+//        if (id == R.id.action_settings) {
+//            startActivity(new Intent(this, SettingsActivity.class));
+//            return true;
+//        }
 
-        return super.onOptionsItemSelected(item);
+            return super.onOptionsItemSelected(item);
     }
-
 
     @Override
     public void onPlayerTrackChange(int position) {

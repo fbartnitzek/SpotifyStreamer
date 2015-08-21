@@ -6,8 +6,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,6 +37,13 @@ public class TrackFragment extends Fragment {
     private ArrayList<TrackParcelable> mTracks;
     private int mPosition;
     private ListView mListView;
+
+    public void onCountryChanged() {
+        Log.v(LOG_TAG, "onCountryChanged");
+        if (mArtist != null) {
+            new FetchTrackTask().execute(mArtist.getId());
+        }
+    }
 
 //    private ShareActionProvider mShareActionProvider;
 // seems to be working only with contentProviders...
@@ -103,27 +108,6 @@ public class TrackFragment extends Fragment {
 //        return shareIntent;
 //    }
 
-    @Override
-    public void onResume() {
-//        mBroadcastManager.registerReceiver(mReceiver,
-//                new IntentFilter(Constants.ACTION_TRACK_CHANGED));
-        super.onResume();
-    }
-
-    @Override
-    public void onStart() {
-//        mListView.setSelection(mPosition);
-//        mListView.smoothScrollToPosition(mPosition);
-        super.onStart();
-    }
-
-    @Override
-    public void onPause() {
-//        Log.v(LOG_TAG, "on pause - unregisters receiver");
-//        mBroadcastManager.unregisterReceiver(mReceiver);
-        super.onPause();
-    }
-
     public void updateSelectedTrack(int position) {
         Log.v(LOG_TAG, "updateSelectedTrack to position " + position);
         mPosition = position;
@@ -180,17 +164,17 @@ public class TrackFragment extends Fragment {
 
     }
 
-    private void setupActionBar(){
-        ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setDisplayHomeAsUpEnabled(true);
-            // shows title - not enough space for both...
-//            actionBar.setTitle("now playing");
-            if (mArtist != null) {
-                actionBar.setTitle(mArtist.getName());
-            }
-        }
-    }
+//    private void setupActionBar(){
+//        ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
+//        if (actionBar != null) {
+//            actionBar.setDisplayHomeAsUpEnabled(true);
+//            // shows title - not enough space for both...
+////            actionBar.setTitle("now playing");
+//            if (mArtist != null) {
+//                actionBar.setTitle(mArtist.getName());
+//            }
+//        }
+//    }
 
     private class FetchTrackTask extends AsyncTask<String, Void, ArrayList<TrackParcelable>> {
 
@@ -208,7 +192,6 @@ public class TrackFragment extends Fragment {
                     toastError("no top tracks found for artist");
                 }
             }
-
             mTrackAdapter.notifyDataSetChanged();
         }
 
@@ -242,7 +225,7 @@ public class TrackFragment extends Fragment {
                     return null;
                 } else {
                     if (topTracks.tracks.size()<1){
-                        return new ArrayList<TrackParcelable>();
+                        return new ArrayList<>();
                     }
                     Log.v(LOG_TAG, topTracks.tracks.size() + " topTracks found");
                     return convertTracks(topTracks.tracks);

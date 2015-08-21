@@ -6,9 +6,12 @@
         <!--app:showAsAction="ifRoom"-->
         <!--app:actionProviderClass="android.support.v7.widget.ShareActionProvider"-->
         <!--android:title="@string/share" />-->
-    <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:title="@string/action_settings"
-        app:showAsAction="never" />
+    <item android:id="@+id/action_now_playing"
+        android:title="@string/now_playing"
+        app:showAsAction="ifRoom"/>
+    <!--<item-->
+        <!--android:id="@+id/action_settings"-->
+        <!--android:orderInCategory="100"-->
+        <!--android:title="@string/action_settings"-->
+        <!--app:showAsAction="never" />-->
 </menu>

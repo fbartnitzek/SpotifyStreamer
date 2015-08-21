@@ -42,7 +42,7 @@ class ArtistAdapter extends ArrayAdapter<ArtistParcelable> {
 //                    inflate(R.layout.list_item_artist, parent, false);
             // http://www.vogella.com/tutorials/AndroidListView/article.html
             LayoutInflater inflater = activity.getLayoutInflater();
-            rowView = inflater.inflate(R.layout.list_item_artist, null);
+            rowView = inflater.inflate(R.layout.list_item_artist, parent, false);
 
             ViewHolder viewHolder = new ViewHolder();
             viewHolder.imageView = (ImageView) rowView.findViewById(R.id.list_item_artist_image);

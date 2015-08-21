@@ -13,6 +13,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * Created by frank on 07.08.15.
@@ -25,12 +26,14 @@ public class PlayerService extends Service implements
     private boolean mStateIsCompleted;
     private int mStateProgress;
     private String mUrl;
+    private int mPosition;
+    private ArrayList<TrackParcelable> mTracks;
     private Handler mProgressHandler;
     private MediaPlayer mPlayer;
     private final IBinder mPlayerBinder = new PlayerBinder();
 
 
-    private Runnable mProgressRunnable = new Runnable() {
+    private final Runnable mProgressRunnable = new Runnable() {
         @Override
         public void run() {
             mStateProgress = mPlayer.getCurrentPosition();
@@ -97,11 +100,6 @@ public class PlayerService extends Service implements
         super.onCreate();
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
     public void pause() {
         Log.v(LOG_TAG, "pause");
         if (mPlayer != null) {
@@ -118,13 +116,28 @@ public class PlayerService extends Service implements
 
     public void seekToPositon(int milliSeconds){
 
-//        Log.v(LOG_TAG, "seeks to position " + milliSeconds + "ms)");
+        Log.v(LOG_TAG, "seeks to position " + milliSeconds + "ms)");
         mPlayer.seekTo(milliSeconds);
 
     }
 
+    public void reconnectPlayer(){
+        Log.v(LOG_TAG, "reconnectPlayer");
+
+        // state stuff
+        mStateProgress = 0;
+        mIsPlaying = true;
+        mStateIsCompleted = false;
+
+        if (mPlayer == null) {
+            Log.v(LOG_TAG, "reconnectPlayer, but is null - should not happen");
+            mIsPlaying = false;
+        }
+        Log.v(LOG_TAG, "reconnectPlayer - player exists");
+    }
+
     public void initPlayerAndStart() {
-//        Log.v(LOG_TAG, "initPlayerAndStart");
+        Log.v(LOG_TAG, "initPlayerAndStart");
 
         // state stuff
         mStateProgress = 0;
@@ -132,7 +145,7 @@ public class PlayerService extends Service implements
         mStateIsCompleted = false;
 
         if (mPlayer != null) {
-//            Log.v(LOG_TAG, "initPlayerAndStart - existing player released");
+            Log.v(LOG_TAG, "initPlayerAndStart - existing player released");
             mPlayer.release();
         }
 
@@ -150,7 +163,7 @@ public class PlayerService extends Service implements
         }
 
         mPlayer.prepareAsync();
-//        Log.v(LOG_TAG, "initPlayerAndStart - player initialized and async prepared");
+        Log.v(LOG_TAG, "initPlayerAndStart - player initialized and async prepared");
     }
 
     @Override
@@ -168,8 +181,8 @@ public class PlayerService extends Service implements
         }
         mWifiLock.acquire();
 
-//        Log.v(LOG_TAG, "onPrepared - player is started & playing, progress tracked, duration: "
-//                + mPlayer.getDuration());
+        Log.v(LOG_TAG, "onPrepared - player is started & playing, progress tracked, duration: "
+                + mPlayer.getDuration());
     }
 
 
@@ -186,7 +199,7 @@ public class PlayerService extends Service implements
         mPlayer.release();
         mPlayer = null;
 
-//        Log.v(LOG_TAG, "onCompletion - stop player and progressHandler");
+        Log.v(LOG_TAG, "onCompletion - stop player and progressHandler");
     }
 
     @Override
@@ -195,11 +208,27 @@ public class PlayerService extends Service implements
         Log.v(LOG_TAG, "an error happened...");
 
         // TODO: some better error handling ... MediaPlayer.MEDIA_ERROR_SERVER_DIED
-        Toast.makeText(this, "an error happened while streaming the media", Toast.LENGTH_LONG);
+        Toast.makeText(this, "an error happened while streaming the media", Toast.LENGTH_LONG).show();
 
         // reset player
         mp.reset();
         return true;
+    }
+
+    public ArrayList<TrackParcelable> getmTracks() {
+        return mTracks;
+    }
+
+    public void setmTracks(ArrayList<TrackParcelable> mTracks) {
+        this.mTracks = mTracks;
+    }
+
+    public int getmPosition() {
+        return mPosition;
+    }
+
+    public void setmPosition(int mPosition) {
+        this.mPosition = mPosition;
     }
 
     public void setmUrl(String mUrl) { this.mUrl = mUrl; }

@@ -1,5 +1,9 @@
 package com.example.frank.spotifystreamer;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -12,8 +16,9 @@ class Util {
 
     private static final String LOG_TAG = Util.class.getSimpleName();
 
-    public static String getSmallestMatchingImage(List<Image> images, float iconSize) {
+    public static String getSmallestMatchingImage(List<Image> images, Context context) {
 
+        float iconSize = context.getResources().getDimension(R.dimen.artist_image_size);
         if (images != null && images.size()>0){
             for (int i = images.size()-1;i>=0;--i){
                 if (images.get(i).width >= iconSize){
@@ -39,6 +44,12 @@ class Util {
             return images.get(maxSizeIndex).url;
         }
         return null;
+    }
+
+    public static String getCountry(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getString(context.getString(R.string.pref_country_key),
+                context.getString(R.string.pref_country_default));
     }
 
     // src: http://stackoverflow.com/questions/9027317/how-to-convert-milliseconds-to-hhmmss-format

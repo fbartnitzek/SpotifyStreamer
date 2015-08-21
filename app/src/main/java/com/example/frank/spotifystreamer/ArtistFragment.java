@@ -22,19 +22,15 @@ import kaaes.spotify.webapi.android.models.Artist;
 import kaaes.spotify.webapi.android.models.ArtistsPager;
 
 
-// TODO: wlan not active - refine search...! => service not available
-
 /**
  * A placeholder fragment containing a simple view.
  */
 public class ArtistFragment extends Fragment {
 
     private static final String LOG_TAG = ArtistFragment.class.getName();
-    private static final String ARTIST_LISTVIEW_STATE = "ARTIST_LISTVIEW_STATE";
-    private static final String SELECTED_KEY = "SELECTED_KEY";
+
     private ArtistAdapter mArtistAdapter;
-    private float iconSize;
-    private ListView mListView;
+    private ArrayList<ArtistParcelable> mArtists;
     private int mPosition = ListView.INVALID_POSITION;
 
     // loader and callbacks seems like overkill for an "always online app"
@@ -44,16 +40,21 @@ public class ArtistFragment extends Fragment {
      * DetailFragmentCallback for when an item has been selected.
      */
     public interface Callback {
-        public void onItemSelected(ArtistParcelable artistUri);
+        void onItemSelected(ArtistParcelable artistUri);
     }
-
-
-    public ArtistFragment() {}
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.v(LOG_TAG, "onCreate");
         super.onCreate(savedInstanceState);
+        mArtists = new ArrayList<>();
+        mArtistAdapter = new ArtistAdapter(getActivity());
+
+        if (savedInstanceState != null) {
+            mArtists = savedInstanceState.getParcelableArrayList(Constants.STATE_ARTISTS);
+            mPosition = savedInstanceState.getInt(Constants.STATE_SELECTED_ARTIST);
+        }
+
         setHasOptionsMenu(true);
     }
 
@@ -63,11 +64,7 @@ public class ArtistFragment extends Fragment {
 
         Log.v(LOG_TAG, "onCreateView");
 
-        iconSize = getActivity().getResources().getDimension(R.dimen.artist_image_size);
-        mArtistAdapter = new ArtistAdapter(getActivity());
-
         View rootView = inflater.inflate(R.layout.fragment_artist, container, false);
-
 
         // SearchView
         final SearchView searchView = (SearchView) rootView.findViewById(R.id.search_artist);
@@ -82,16 +79,17 @@ public class ArtistFragment extends Fragment {
                     @Override
                     public boolean onQueryTextSubmit(String query) {
                         // interactive search
-//                        new FetchArtistTask().execute(query);    //start asyncFetchTask
+                        new FetchArtistTask().execute(query);    //start asyncFetchTask
                         return false;
                     }
 
                     @Override
                     public boolean onQueryTextChange(String newText) {
+                        Log.v(LOG_TAG, "searchView - text changed");
                         if (newText != null && !newText.isEmpty()) {
                             new FetchArtistTask().execute(newText);    //start asyncFetchTask
                         } else {
-                            mArtistAdapter.clear();
+//                            mArtistAdapter.clear();
                         }
                         return true;
                     }
@@ -99,25 +97,15 @@ public class ArtistFragment extends Fragment {
         );
 
         // listview to show artists
-        mListView = (ListView) rootView.findViewById(R.id.listview_artists);
+        ListView mListView = (ListView) rootView.findViewById(R.id.listview_artists);
         mListView.setAdapter(mArtistAdapter);
 
-        if (savedInstanceState != null) {
-            if (savedInstanceState.containsKey(ARTIST_LISTVIEW_STATE)) {
-                Log.v(LOG_TAG, "onCreateView - restore artists");
-                // restore artist list
-                ArrayList<ArtistParcelable> allArtists =
-                        savedInstanceState.getParcelableArrayList(ARTIST_LISTVIEW_STATE);
-                if (!allArtists.isEmpty()) {
-                    mArtistAdapter.addAll(allArtists);
-                }
-            }
-            if (savedInstanceState.containsKey(SELECTED_KEY)) {
-                Log.v(LOG_TAG, "onCreateView - restore position");
-                mPosition = savedInstanceState.getInt(SELECTED_KEY);
-                if (mPosition != ListView.INVALID_POSITION) {
-                    mListView.smoothScrollToPosition(mPosition);
-                }
+        if (mArtists != null && !mArtists.isEmpty()){
+            mArtistAdapter.addAll(mArtists);
+
+            if (ListView.INVALID_POSITION == mPosition) {
+                mListView.smoothScrollToPosition(mPosition);
+                mListView.setItemChecked(mPosition, true);
             }
         }
 
@@ -130,6 +118,7 @@ public class ArtistFragment extends Fragment {
                 mPosition = position;
 
                 // update MainActivity with ArtistParcelable of selected item
+
                 ((Callback) getActivity()).onItemSelected(mArtistAdapter.getItem(position));
             }
         });
@@ -141,27 +130,19 @@ public class ArtistFragment extends Fragment {
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
         Log.v(LOG_TAG, "onSaveInstanceState");
-        if (mArtistAdapter.isEmpty()){
-            return;
-        }
 
-        ArrayList<ArtistParcelable> artists = new ArrayList<>();
-
-        for (int i = 0; i<mArtistAdapter.getCount();++i){
-            artists.add(mArtistAdapter.getItem(i));
-        }
-
-        savedInstanceState.putParcelableArrayList(ARTIST_LISTVIEW_STATE, artists);
-        savedInstanceState.putInt(SELECTED_KEY, mPosition);
+        savedInstanceState.putParcelableArrayList(Constants.STATE_ARTISTS, mArtists);
+        savedInstanceState.putInt(Constants.STATE_SELECTED_ARTIST, mPosition);
     }
 
-    public class FetchArtistTask extends AsyncTask<String, Void, ArtistParcelable[]>{
+    public class FetchArtistTask extends AsyncTask<String, Void, ArrayList<ArtistParcelable>>{
 
         @Override
-        protected void onPostExecute(ArtistParcelable[] artistParcelables) {
+        protected void onPostExecute(ArrayList<ArtistParcelable> artistParcelables) {
             Log.v(LOG_TAG, "onPostExecute");
             mArtistAdapter.clear();
-            if (artistParcelables != null){
+            if (artistParcelables != null) {
+                mArtists = artistParcelables;
                 mArtistAdapter.addAll(artistParcelables);
             } else {
                 toastError(null);
@@ -170,7 +151,7 @@ public class ArtistFragment extends Fragment {
         }
 
         @Override
-        protected ArtistParcelable[] doInBackground(String... params) {
+        protected ArrayList<ArtistParcelable> doInBackground(String... params) {
             // void seems to be no valid option
             Log.v(LOG_TAG, "doInBackground");
             if (params.length == 0){
@@ -204,18 +185,17 @@ public class ArtistFragment extends Fragment {
             return null;
         }
 
-        private ArtistParcelable[] convertArtists(List<Artist> artists) {
-            List<ArtistParcelable> list = new ArrayList<>();
+        private ArrayList<ArtistParcelable> convertArtists(List<Artist> artists) {
+            ArrayList<ArtistParcelable> list = new ArrayList<>();
             for (int i=0; i<artists.size();++i) {
                 Artist artist = artists.get(i);
                 list.add(new ArtistParcelable(
                         artist.name,
-                        Util.getSmallestMatchingImage(artist.images, iconSize),
+                        Util.getSmallestMatchingImage(artist.images, getActivity()),
                         artist.id));
             }
 
-            ArtistParcelable[] result = list.toArray(new ArtistParcelable[list.size()]);
-            return result;
+            return list;
         }
 
         private void toastError (String errorMsg){

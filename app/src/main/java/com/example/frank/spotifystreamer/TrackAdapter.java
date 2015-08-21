@@ -40,7 +40,7 @@ class TrackAdapter extends ArrayAdapter<TrackParcelable> {
             // http://www.vogella.com/tutorials/AndroidListView/article.html
 
             LayoutInflater inflater = activity.getLayoutInflater();
-            rowView = inflater.inflate(R.layout.list_item_track, null);
+            rowView = inflater.inflate(R.layout.list_item_track, parent, false);
 
             ViewHolder viewHolder = new ViewHolder();
             viewHolder.image = (ImageView) rowView.findViewById(R.id.list_item_track_album_image);

@@ -1,7 +1,6 @@
 package com.example.frank.spotifystreamer;
 
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentManager;
@@ -18,8 +17,6 @@ public class PlayerActivity extends ActionBarActivity implements
 
     private static final String LOG_TAG = PlayerActivity.class.getName();
 
-    private DialogFragment mDialogFragment;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,17 +24,29 @@ public class PlayerActivity extends ActionBarActivity implements
         Log.v(LOG_TAG, "onCreate - activity started");
 
         FragmentManager fm = getSupportFragmentManager();
-        mDialogFragment = (DialogFragment) fm.findFragmentByTag(Constants.TAG_PLAYER_FRAGMENT);
+        DialogFragment mDialogFragment = (DialogFragment) fm.findFragmentByTag(Constants.TAG_PLAYER_FRAGMENT);
 
         if (mDialogFragment == null) {
 
             // parsing intent
             Bundle args = new Bundle();
-            args.putParcelableArrayList(Constants.ARGS_TRACKS,
-                    getIntent().getParcelableArrayListExtra(Constants.EXTRA_TRACKS));
-            args.putInt(Constants.ARGS_TRACK_NUMBER,
-                    getIntent().getIntExtra(Constants.EXTRA_TRACK_NUMBER, 0));
-            Log.v(LOG_TAG, "onCreate - parsed intent");
+            if (!getIntent().hasExtra(Constants.EXTRA_RESTART_PLAYING)
+                || getIntent().getBooleanExtra(Constants.EXTRA_RESTART_PLAYING, true)){
+                args.putParcelableArrayList(Constants.ARGS_TRACKS,
+                        getIntent().getParcelableArrayListExtra(Constants.EXTRA_TRACKS));
+                args.putInt(Constants.ARGS_TRACK_NUMBER,
+                        getIntent().getIntExtra(Constants.EXTRA_TRACK_NUMBER, 0));
+                Log.v(LOG_TAG, "onCreate - parsed initial intent");
+            } else {
+                args.putBoolean(Constants.ARGS_RESTART_PLAYING, getIntent()
+                        .getBooleanExtra(Constants.EXTRA_RESTART_PLAYING, false));
+                args.putParcelableArrayList(Constants.ARGS_TRACKS,
+                        getIntent().getParcelableArrayListExtra(Constants.EXTRA_TRACKS));
+                args.putInt(Constants.ARGS_TRACK_NUMBER,
+                        getIntent().getIntExtra(Constants.EXTRA_TRACK_NUMBER, 0));
+                Log.v(LOG_TAG, "onCreate - parsed resume intent");
+            }
+
 
             // add new fragment
             PlayerFragment newFragment = new PlayerFragment();
@@ -56,7 +65,7 @@ public class PlayerActivity extends ActionBarActivity implements
     public void onPlayerTrackChange(int position) {
 
         Log.v(LOG_TAG, "onPlayerTrackChange, position: " + position);
-        Activity parent = getParent();
+//        Activity parent = getParent();
         //TODO: how to modify fragment from parent activity...?
 //        TrackFragment tf = (TrackFragment) getSupportFragmentManager()
 //                .findFragmentById(R.id.track_detail_container);

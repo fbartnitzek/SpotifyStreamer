@@ -9,6 +9,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -19,6 +20,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
@@ -28,11 +30,6 @@ import java.util.ArrayList;
  * Created by frank on 05.08.15.
  */
 
-// TODO anywhere
-//Intent intent = new Intent();
-//        intent.putExtra(FRAGMENT_KEY, "Ok");
-//        getTargetFragment().onActivityResult(getTargetRequestCode(), Activity.RESULT_OK, intent);
-//        getFragmentManager().popBackStack();
 
 public class PlayerFragment extends DialogFragment
         implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
@@ -64,7 +61,7 @@ public class PlayerFragment extends DialogFragment
     private ImageButton mPlayButton;
     private SeekBar mSeekBar;
 
-    private int mDuration = Constants.TRACK_DEFAULT_LENGTH;   // workaround for unknown duration and division
+    private final int mDuration = Constants.TRACK_DEFAULT_LENGTH;   // workaround for unknown duration and division
     private PlayerTrackListener mTrackChangeCallback;
 
     public interface PlayerTrackListener {
@@ -72,10 +69,11 @@ public class PlayerFragment extends DialogFragment
     }
 
     // Broadcast-receiver and rotation did not work so well...
-    private Runnable mProgressRunnable = new Runnable() {
+    private final Runnable mProgressRunnable = new Runnable() {
         @Override
         public void run() {
             if (mPlayerService != null) {
+                Log.v(LOG_TAG, "mProgressRunnable runs, mplayerService is playing: " + mPlayerService.isPlaying());
                 if (mPlayerService.isPlaying()) {
                     mSeekBar.setProgress(mPlayerService.getStateProgress());
                     mSeekBar.setMax(mPlayerService.getmStateDuration());
@@ -94,8 +92,8 @@ public class PlayerFragment extends DialogFragment
             mProgressHandler.postDelayed(this, Constants.UPDATE_INTERVAL);
         }
     };
-
-    private ServiceConnection mConnection = new ServiceConnection() {
+    // src: http://code.tutsplus.com/tutorials/create-a-music-player-on-android-song-playback--mobile-22778
+    private final ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             PlayerService.PlayerBinder playerBinder = (PlayerService.PlayerBinder) service;
@@ -103,11 +101,26 @@ public class PlayerFragment extends DialogFragment
             mIsBound = true;
 
             if (!mIsInit) {
+                Log.v(LOG_TAG, "onServiceConnected - initPlayerAndStart");
                 mPlayerService.setmUrl(mUrl);
+                mPlayerService.setmTracks(mTracks);
+                mPlayerService.setmPosition(mPosition);
                 mPlayerService.initPlayerAndStart();
 
                 mIsInit = true;
                 mIsPaused = false;
+            } else {
+                mPlayerService.reconnectPlayer();
+                mPosition = mPlayerService.getmPosition();
+                mTracks = mPlayerService.getmTracks();
+                if (mTracks == null || mTracks.isEmpty()){
+                    Toast.makeText(getActivity(), R.string.now_playing_unavailable,
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                Log.v(LOG_TAG, "onServiceConnected - reconnectPlayer and get position " + mPosition);
+                updateViewsWithCurrentTrack();
             }
             watchProgress();
         }
@@ -118,6 +131,7 @@ public class PlayerFragment extends DialogFragment
 
     private void watchProgress() {
         mProgressHandler = new Handler();
+        Log.v(LOG_TAG, "watchProgress Handler created");
         mProgressHandler.post(mProgressRunnable);
     }
 
@@ -176,11 +190,13 @@ public class PlayerFragment extends DialogFragment
         mNextButton = (ImageButton) rootView.findViewById(R.id.button_next);
         mPlayButton = (ImageButton) rootView.findViewById(R.id.button_play);
 
-        if (!mIsInit) { // init data
-            Log.v(LOG_TAG, "onCreateView - reading args");
-            mTracks = getArguments().getParcelableArrayList(Constants.ARGS_TRACKS);
-            mPosition = getArguments().getInt(Constants.ARGS_TRACK_NUMBER);
-            mUrl = mTracks.get(mPosition).getPreviewUrl();
+        if (getArguments().containsKey(Constants.ARGS_RESTART_PLAYING) &&
+                !getArguments().getBoolean(Constants.ARGS_RESTART_PLAYING)){
+
+            mIsInit = true;
+            mIsBound = true;
+            mIsPaused = false;
+            Log.v(LOG_TAG, "onCreateView - resume playing without args");
         }
 
         // init buttons and seekbar
@@ -191,7 +207,14 @@ public class PlayerFragment extends DialogFragment
         mSeekBar.setOnSeekBarChangeListener(this);
         mSeekBar.setMax(Constants.TRACK_DEFAULT_LENGTH);
 
-        updateViewsWithCurrentTrack();
+        if (!mIsInit) { // init data
+            mTracks = getArguments().getParcelableArrayList(Constants.ARGS_TRACKS);
+            mPosition = getArguments().getInt(Constants.ARGS_TRACK_NUMBER);
+            Log.v(LOG_TAG, "onCreateView - reading args for track "
+                    + mTracks.get(mPosition).getName());
+            mUrl = mTracks.get(mPosition).getPreviewUrl();
+            updateViewsWithCurrentTrack();
+        }
 
         return rootView;
     }
@@ -206,7 +229,8 @@ public class PlayerFragment extends DialogFragment
 
 
     private void updateViewsWithCurrentTrack() {
-        Log.v(LOG_TAG, "in updateViewsWithCurrentTrack ");
+        Log.v(LOG_TAG, "in updateViewsWithCurrentTrack position: " + mPosition
+                + ", track: " + mTracks.get(mPosition).getName());
 
         // artist name
         TrackParcelable track = mTracks.get(mPosition);
@@ -221,7 +245,7 @@ public class PlayerFragment extends DialogFragment
 
         // album image
         String url = track.getPictureUrl();
-        if (url != null && !url.isEmpty()){
+        if (url != null && !url.isEmpty()) {
             Picasso.with(getActivity()).load(url).into(mAlbumImageView);
         }
 
@@ -232,6 +256,7 @@ public class PlayerFragment extends DialogFragment
 
 
     /** The system calls this only when creating the layout in a dialog. */
+    @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         Log.v(LOG_TAG, "in onCreateDialog");
@@ -281,7 +306,9 @@ public class PlayerFragment extends DialogFragment
         Log.v(LOG_TAG, "onStop - unbind service and remove callbacks");
         getActivity().unbindService(mConnection);
         mIsBound = false;
-        mProgressHandler.removeCallbacks(mProgressRunnable);
+        if (mProgressHandler != null){
+            mProgressHandler.removeCallbacks(mProgressRunnable);
+        }
     }
 
     @Override
@@ -297,11 +324,13 @@ public class PlayerFragment extends DialogFragment
         super.onDestroy();
     }
 
-    public void restartPlayer() {
+    private void restartPlayer() {
         mSeekBar.setProgress(0);
         mElapsedView.setText(Util.formatTime(0));
         mUrl = mTracks.get(mPosition).getPreviewUrl();
         mPlayerService.setmUrl(mUrl);
+        mPlayerService.setmTracks(mTracks);
+        mPlayerService.setmPosition(mPosition);
         mPlayerService.initPlayerAndStart();
         mIsInit = true;
         mIsPaused = false;
